@@ -1,0 +1,469 @@
+<!-- ✅ 頁面標題與提示按鈕 -->
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="mb-0">銷售資料查詢</h2>
+  <button type="button"
+          class="btn btn-warning"
+          data-bs-toggle="modal"
+          data-bs-target="#hint1">
+    查看操作提示
+  </button>
+</div>
+
+<!-- ✅ 操作提示 Modal -->
+<div class="modal fade"
+     id="hint1"
+     tabindex="-1"
+     aria-labelledby="hintLabel"
+     aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"
+            id="hintLabel">操作提示</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        <p><span class="fs-6 badge bg-warning text-dark">1</span> 輸入查詢條件，無輸入資料為全選</p>
+        <p><span class="fs-6 badge bg-warning text-dark">2</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
+        <p>－－－－－－－－－－－－－－－－－－－－－－－－－－－－－</p>
+        <p><span class="fs-6 badge bg-info text-dark">注意</span> 安全設定關係，本系統只有在麻豆總部網域可以進行查詢</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ 固定頂部的控制列 -->
+<div class="bg-light sticky-top py-3"
+     style="top: 56px; z-index: 1030;">
+  <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <!-- 篩選表單 -->
+    <form action="/sale/sale-data"
+          method="POST"
+          id="sale-form">
+
+      <div class="input-group input-group-sm mb-2"
+           style="height: 35px;">
+        <span class="input-group-text"
+              style="height: 35px;">日期範圍</span>
+        <input type="date"
+               name="SALE_DATE_S"
+               class="form-control"
+               style="height: 35px; max-width:220px;"
+               value="{{filterIn.SALE_DATE_S}}"
+               aria-describedby="basic-addon1">
+        <p class="me-2 ms-2 pt-1"
+           style="height: 35px;"> ~ </p>
+        <input type="date"
+               name="SALE_DATE_E"
+               class="form-control"
+               style="height: 35px; max-width:220px;"
+               value="{{filterIn.SALE_DATE_E}}"
+               aria-describedby="basic-addon1">
+
+        <span class="input-group-text"
+              style="height: 35px;">銷售門市</span>
+        {{#each lists.shop}}
+        <input class="btn-check"
+               type="checkbox"
+               name="SHOP_ID"
+               id="{{this.SHOP_ID}}"
+               value="{{this.SHOP_ID}}"
+               {{#if
+               this.isCheck}}checked{{/if}}>
+        <label class="btn btn-outline-secondary"
+               style="height: 35px; width:35px;"
+               for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
+        {{/each}}
+
+        <span class="input-group-text"
+              style="height: 35px;">單據類型</span>
+        {{#each lists.saleType}}
+        <input class="btn-check"
+               type="checkbox"
+               name="TYPE"
+               id="{{this.TYPE_ID}}"
+               value="{{this.TYPE_ID}}"
+               {{#if
+               this.isCheck}}checked{{/if}}>
+        <label class="btn btn-outline-secondary"
+               style="height: 35px; "
+               for="{{this.TYPE_ID}}"><span class="align-middle">{{this.TYPE_NAME}}</span></label>
+        {{/each}}
+
+      </div>
+
+      <div class="input-group input-group-sm mb-2">
+        <span class="input-group-text">貴賓名稱</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="vipNameOptions"
+               name="VIP_NAME"
+               id="VIP_NAME"
+               {{#if
+               filterIn.VIP_NAME}}
+               value="{{filterIn.VIP_NAME}}"
+               {{/if}}>
+        <datalist id="vipNameOptions">
+          {{#each lists.vip}}
+          <option value="{{this.NAME}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">貴賓編號</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="vipIdOptions"
+               name="VIP_ID"
+               id="VIP_ID"
+               {{#if
+               filterIn.VIP_ID}}
+               value="{{filterIn.VIP_ID}}"
+               {{/if}}>
+        <datalist id="vipIdOptions">
+          {{#each lists.vip}}
+          <option value="{{this.VIP_ID}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">貴賓電話</span>
+        <input class="form-control"
+               style="max-width:120px;"
+               name="VIP_TEL"
+               id="VIP_TEL"
+               {{#if
+               filterIn.VIP_TEL}}
+               value="{{filterIn.VIP_TEL}}"
+               {{/if}}>
+
+        <span class="input-group-text">統一編號</span>
+        <input class="form-control"
+               style="max-width:120px;"
+               name="vip_code"
+               id="vip_code"
+               {{#if
+               filterIn.vip_code}}
+               value="{{filterIn.vip_code}}"
+               {{/if}}>
+
+        <span class="input-group-text">貴賓群組</span>
+        <select class="form-select"
+                style="max-width:150px;"
+                name="vipgrp_id"
+                id="vipgrp_id">
+          <option value=""
+                  {{select
+                  filterIn.vipgrp_id ""
+                  }}>全部</option>
+          {{#each lists.vipgrp}}
+          <option value="{{this.vipgrp_id}}"
+                  {{select
+                  ../filterIn.vipgrp_id
+                  this.vipgrp_id}}>
+            {{this.vipgrp_name}}
+          </option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="input-group input-group-sm mb-2">
+        <span class="input-group-text">單據編號</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               name="SALE_ID"
+               id="SALE_ID"
+               {{#if
+               filterIn.SALE_ID}}
+               value="{{filterIn.SALE_ID}}"
+               {{/if}}>
+
+        <span class="input-group-text">是否結算</span>
+        <select class="form-select"
+                style="max-width:95px;"
+                name="EXPORTED"
+                id="EXPORTED">
+          <option value=""
+                  {{select
+                  filterIn.EXPORTED ""
+                  }}>全部</option>
+          <option value="T"
+                  {{select
+                  filterIn.EXPORTED "T"
+                  }}>是</option>
+          <option value="F"
+                  {{select
+                  filterIn.EXPORTED "F"
+                  }}>否</option>
+        </select>
+
+        <span class="input-group-text">發票開立</span>
+        <select class="form-select"
+                style="max-width:95px;"
+                name="is_inv"
+                id="is_inv">
+          <option value=""
+                  {{select
+                  filterIn.is_inv ""
+                  }}>全部</option>
+          <option value="T"
+                  {{select
+                  filterIn.is_inv "T"
+                  }}>是</option>
+          <option value="F"
+                  {{select
+                  filterIn.is_inv "F"
+                  }}>否</option>
+        </select>
+
+        <span class="input-group-text">發票號碼</span>
+        <input class="form-control"
+               style="max-width:120px;"
+               name="invo_no_b"
+               id="invo_no_b"
+               {{#if
+               filterIn.invo_no_b}}
+               value="{{filterIn.invo_no_b}}"
+               {{/if}}>
+
+        <span class="input-group-text">載具號碼</span>
+        <input class="form-control"
+               style="max-width:120px;"
+               name="buyer_number"
+               id="buyer_number"
+               {{#if
+               filterIn.buyer_number}}
+               value="{{filterIn.buyer_number}}"
+               {{/if}}>
+
+        <span class="input-group-text">付款方式</span>
+        <select class="form-select"
+                style="max-width:150px;"
+                name="PAY_ID"
+                id="PAY_ID">
+          <option value=""
+                  {{select
+                  filterIn.PAY_ID ""
+                  }}>全部</option>
+          {{#each lists.pay}}
+          <option value="{{this.PAY_ID}}"
+                  {{select
+                  ../filterIn.PAY_ID
+                  this.PAY_ID}}>
+            {{this.PAY_NAME}}
+          </option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="input-group input-group-sm mb-3">
+        <span class="input-group-text">商品名稱</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="prodNameOptions"
+               name="PROD_NAME1"
+               id="PROD_NAME1"
+               {{#if
+               filterIn.PROD_NAME1}}
+               value="{{filterIn.PROD_NAME1}}"
+               {{/if}}>
+        <datalist id="prodNameOptions">
+          {{#each lists.prod}}
+          <option value="{{this.PROD_NAME1}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">商品類別</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="depIdOptions"
+               name="DEP_NAME"
+               id="DEP_NAME"
+               {{#if
+               filterIn.DEP_NAME}}
+               value="{{filterIn.DEP_NAME}}"
+               {{/if}}>
+        <datalist id="depIdOptions">
+          {{#each lists.dep}}
+          <option value="{{this.DEP_NAME}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">單據備註</span>
+        <input class="form-control"
+               name="MEMO"
+               id="MEMO"
+               {{#if
+               filterIn.MEMO}}
+               value="{{filterIn.MEMO}}"
+               {{/if}}>
+      </div>
+
+      <div class="mb-2">
+        <button type="submit"
+                form="sale-form"
+                class="btn btn-primary">查詢</button>
+        <button id="exportExcelBtn"
+                class="btn btn-success">匯出 Excel</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<table class="table table-striped table-hover align-middle table-bordered"
+       style="font-size: 15px;">
+  <thead class="table-dark"
+         style="position: sticky; top: 290px; z-index: 1020;">
+    <tr>
+      <th style="min-width: 45px;"
+          class="text-center">門市</th>
+      <th style="min-width: 200px;">單據編號</th>
+      <th style="min-width: 80px;"
+          class="text-center">日期</th>
+      <th style="min-width: 120px;">貴賓名稱</th>
+      <th colspan="8">
+        <table class="table table-borderless table-sm mb-0 ">
+          <thead class="table-dark">
+            <tr>
+              <th style="min-width: 60px;"
+                  class="text-center">加值</th>
+              <th style="min-width: 240px;">品名</th>
+              <th style="min-width: 60px;"
+                  class="text-end">售價</th>
+              <th style="min-width: 45px;"
+                  class="text-end">數量</th>
+              <th style="min-width: 45px;"
+                  class="text-center">單位</th>
+              <th style="min-width: 60px;"
+                  class="text-end">小計</th>
+              <th style="min-width: 60px;"
+                  class="text-end">折讓</th>
+              <th style="min-width: 80px;"
+                  class="text-center">招待備註</th>
+            </tr>
+          </thead>
+        </table>
+      </th>
+      <th style="min-width: 60px;">總金額</th>
+      <th style="min-width: 60px;">總折讓</th>
+      <th style="min-width: 110px;"
+          class="text-center">結帳方式</th>
+      <th style="min-width: 80px;"
+          class="text-center">發票號碼</th>
+      <th style="min-width: 80px;"
+          class="text-center">載具編號</th>
+      <th style="min-width: 80px;">單據備註</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {{#each sales}}
+    <tr>
+      <td class="text-center">{{SHOP_ID}}</td>
+      <td>
+        {{{ternary (eq TYPE "0") '<span class="badge bg-success"
+              style="font-size: 14px;">銷貨</span>' (ternary (eq TYPE "1") '<span class="badge bg-danger"
+              style="font-size: 14px;">銷退</span>'
+        '<span class=" badge bg-secondary"
+              style="font-size: 14px;">已退</span>')}}}
+        {{SALE_ID}}
+      </td>
+      <td class="text-center">{{SALE_DATE}}</td>
+      <td>{{VIP.NAME}}</td>
+      <td colspan="8">
+        <table class="table table-borderless table-sm mb-0">
+          <tbody>
+            {{#each PROD_LIST}}
+            <tr>
+              <td style="min-width: 60px;"
+                  class="text-center"><span class="badge rounded-pill bg-secondary">{{TASTE_MEMO}}</span></td>
+              <td style="min-width: 240px;">{{PROD_NAME1}}</td>
+              <td style="min-width: 60px;"
+                  class="text-end">{{SALE_PRICE}}</td>
+              <td style="min-width: 45px;"
+                  class="text-end">{{QTY}}</td>
+              <td style="min-width: 45px;"
+                  class="text-center">{{UNIT_NAME}}</td>
+              <td style="min-width: 60px;"
+                  class="text-end">{{SUBTOTAL}}</td>
+              <td style="min-width: 60px;"
+                  class="text-end">{{ITEM_DISC}}</td>
+              <td style="min-width: 80px;"
+                  class="text-center">{{FREE_MEMO}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </td>
+      <td class="text-end">{{amount}}</td>
+      <td class="text-end">{{TOT_DISCHARGE}}</td>
+      <td class="text-center">{{PAY_NAME}}</td>
+      <td class="text-center">{{invo_no_b}}</td>
+      <td class="text-center">{{buyer_number}}</td>
+      <td>{{{optionLabel MEMO spec_memo}}}</td>
+      {{/each}}
+  </tbody>
+</table>
+
+
+<script>
+  document.getElementById('exportExcelBtn').addEventListener('click', async (e) => {
+    e.preventDefault(); // ❗ 阻止表單預設提交
+
+    const form = document.getElementById('sale-form');
+
+    // 1️⃣ 收集表單資料
+    const formData = new FormData(form);
+    // 如果 checkbox 多選，FormData 會有多筆同名值
+    const plainData = {};
+    formData.forEach((value, key) => {
+      if (plainData[key]) {
+        // 已存在就變陣列
+        if (!Array.isArray(plainData[key])) {
+          plainData[key] = [plainData[key]];
+        }
+        plainData[key].push(value);
+      } else {
+        plainData[key] = value;
+      }
+    });
+
+    try {
+      // 2️⃣ 傳送到匯出 API
+      const res = await fetch('/sale/sale-data/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(plainData) // ✅ 只傳篩選條件
+      });
+
+      if (!res.ok) throw new Error('匯出失敗');
+
+      // 3️⃣ 下載檔案
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      // 從 header 解析檔名（如果後端有設定 Content-Disposition）
+      let filename = '銷售資料.xlsx';
+      const disposition = res.headers.get('Content-Disposition');
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match != null && match[1]) {
+          filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+        }
+      }
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+</script>

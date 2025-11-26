@@ -1,0 +1,48 @@
+{
+  "name": "pos-hq-query",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "pkg . --targets node18-win-x64 --output dist/app.exe"
+  },
+  "pkg": {
+    "assets": [
+      ".env",
+      "public/**/*",
+      "src/views/**/*",
+      "node_modules/open/xdg-open"
+    ],
+    "scripts": [
+      "server.js",
+      "src/**/*.js"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "noBytecode": [
+      "node_modules/is-wsl/**/*",
+      "node_modules/is-docker/**/*",
+      "node_modules/run-applescript/**/*",
+      "node_modules/open/**/*",
+      "node_modules/buffers/**/*"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dayjs": "^1.11.18",
+    "dotenv": "^17.2.1",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "express-handlebars": "^8.0.3",
+    "mssql": "^11.0.1",
+    "nodemon": "^3.1.10",
+    "utc": "^0.1.0"
+  }
+}

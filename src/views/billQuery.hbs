@@ -1,0 +1,234 @@
+<!-- ✅ 頁面標題與提示按鈕 -->
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="mb-0">對帳單查詢</h2>
+  <button type="button"
+          class="btn btn-warning"
+          data-bs-toggle="modal"
+          data-bs-target="#hint1">
+    查看操作提示
+  </button>
+</div>
+
+<!-- ✅ 操作提示 Modal -->
+<div class="modal fade"
+     id="hint1"
+     tabindex="-1"
+     aria-labelledby="hintLabel"
+     aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"
+            id="hintLabel">操作提示</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        <p><span class="fs-6 badge bg-warning text-dark">1</span> 輸入查詢條件，無輸入資料為全選</p>
+        <p><span class="fs-6 badge bg-warning text-dark">2</span>
+          </br><b>帳款月份：</b>
+          </br>2025年9月輸入"202509"
+          </br>2025年12月輸入"202512"...以此類推</p>
+        <p><span class="fs-6 badge bg-warning text-dark">3</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
+        <p>－－－－－－－－－－－－－－－－－－－－－－－－－－－－－</p>
+        <p><span class="fs-6 badge bg-info text-dark">注意</span>
+          </br>對帳單下載，需等待伺服器處理回應才會下載到電腦
+          </br>一次下載很多個檔案，需要等比較久</p>
+        <p><span class="fs-6 badge bg-info text-dark">注意</span> 安全設定關係，本系統只有在麻豆總部網域可以進行查詢</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ 固定頂部的控制列 -->
+<div class="bg-light sticky-top py-3"
+     style="top: 56px; z-index: 1030;">
+  <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <!-- 篩選表單 -->
+    <form action="/bill/bill-data"
+          method="POST"
+          id="bill-form">
+
+      <div class="input-group input-group-sm mb-2">
+        <span class="input-group-text">帳款月份</span>
+        <input name="BillMonthStart"
+               class="form-control"
+               style="max-width:100px;"
+               value="{{filter.BillMonthStart}}"
+               aria-describedby="basic-addon1">
+        <span class="input-group-text bg-light"> ~ </span>
+
+        <input name="BillMonthEnd"
+               class="form-control"
+               style="max-width:100px;"
+               value="{{filter.BillMonthEnd}}"
+               aria-describedby="basic-addon1">
+
+        <span class="input-group-text">收款門市</span>
+        <select class="form-select"
+                style="max-width:150px;"
+                name="SHOP_ID"
+                id="SHOP_ID">
+          <option value=""
+                  {{select
+                  filter.SHOP_ID ""
+                  }}>全部</option>
+          {{#each lists.shop}}
+          <option value="{{this.SHOP_ID}}"
+                  {{select
+                  ../filter.SHOP_ID
+                  this.SHOP_ID}}>
+            {{this.SHOP_ID}}
+          </option>
+          {{/each}}
+        </select>
+
+        <span class="input-group-text">貴賓名稱</span>
+        <input class="form-control"
+               style="min-width:240px;"
+               list="vipNameOptions"
+               name="VIP_NAME"
+               id="VIP_NAME"
+               {{#if
+               filter.VIP_NAME}}
+               value="{{filter.VIP_NAME}}"
+               {{/if}}>
+        <datalist id="vipNameOptions">
+          {{#each lists.vip}}
+          <option value="{{this.NAME}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">貴賓編號</span>
+        <input class="form-control"
+               style="min-width:240px;"
+               list="vipIdOptions"
+               name="VIP_ID"
+               id="VIP_ID"
+               {{#if
+               filter.VIP_ID}}
+               value="{{filter.VIP_ID}}"
+               {{/if}}>
+        <datalist id="vipIdOptions">
+          {{#each lists.vip}}
+          <option value="{{this.VIP_ID}}">
+            {{/each}}
+        </datalist>
+
+      </div>
+
+      <div class="mb-2">
+        <button type="submit"
+                form="bill-form"
+                class="btn btn-primary">查詢</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<table class="container table table-striped table-hover align-middle table-bordered"
+       style="font-size: 15px;">
+  <thead class="table-dark text-center border-0"
+         style="position: sticky; top: 168px; z-index: 1020;">
+    <tr>
+      <th style="min-width: 45px;">收款門市</th>
+      <th style="min-width: 100px;">對帳單號</th>
+      <th style="max-width: 60px;">帳款月份</th>
+      <th style="min-width: 30px;">帳次</th>
+      <th style="min-width: 100px;">對帳日期</th>
+      <th style="min-width: 120px;">貴賓名稱</th>
+      <th style="min-width: 60px;"
+          class="bg-primary">應收金額</th>
+      <th style="min-width: 60px;"
+          class="bg-success">已收金額</th>
+      <th style="min-width: 60px;"
+          class="bg-danger">未收金額</th>
+      {{!-- <th style="min-width: 60px;">結算金額</th>
+      <th style="min-width: 60px;">折扣率</th>
+      <th style="min-width: 60px;">帳單折讓</th>
+      <th style="min-width: 60px;">加減項金額</th> --}}
+      {{!-- <th style="min-width: 120px;">負責人員</th>
+      <th style="min-width: 120px;">核准人員</th> --}}
+      <th>下載對帳單</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {{#each bills}}
+    <tr class="text-center">
+      <td>{{SHOP_ID}}</td>
+      <td> {{STR_BAL_ID}} </td>
+      <td>{{BILL_MONTH}}</td>
+      <td>{{BILL_ORDER}}</td>
+      <td>{{INPUT_DATE}}</td>
+      <td>{{VIP.NAME}}</td>
+      <td>{{TOTAL}}</td>
+      <td>{{PAID}}</td>
+      <td>{{N_PAID}}</td>
+      {{!-- <td>{{AMOUNT}}</td>
+      <td>{{DISCOUNT}}</td>
+      <td>{{DISCHARGE}}</td>
+      <td>{{{MISCELL_COST}}}</td> --}}
+      <td>
+        <button type="button"
+                class="btn btn-sm btn-success download-btn"
+                data-id="{{STR_BAL_ID}}">
+          下載
+        </button>
+      </td>
+      {{/each}}
+  </tbody>
+</table>
+
+<script id="bills-data"
+        type="application/json">
+  {{{json bills}}}
+</script>
+
+<script>
+  const billsData = JSON.parse(document.getElementById('bills-data').textContent)
+
+  document.querySelectorAll('.download-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id
+
+      try {
+        const res = await fetch(`/bill/bill-data/export/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bills: billsData })
+        })
+        if (!res.ok) throw new Error('下載失敗')
+
+        // 解析檔名
+        const disposition = res.headers.get('Content-Disposition')
+        let filename = '對帳單.xlsx'
+        if (disposition) {
+          const filenameStarMatch = disposition.match(/filename\*=[^']+'[^']+'(.+)/)
+          const filenameMatch = disposition.match(/filename="(.+?)"/)
+          if (filenameStarMatch && filenameStarMatch[1]) {
+            filename = decodeURIComponent(filenameStarMatch[1])
+          } else if (filenameMatch && filenameMatch[1]) {
+            filename = decodeURIComponent(filenameMatch[1])
+          }
+        }
+
+        // 下載檔案
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      } catch (err) {
+        alert(err.message)
+      }
+    })
+  })
+</script>
