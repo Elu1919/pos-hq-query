@@ -90,12 +90,14 @@ const billData = {
         `)
 
       const bills = result.recordset
-      bills.forEach(bill => {
-        const inputDate = bill.INPUT_DATE.toISOString().replace('Z', '')
-        bill.INPUT_DATE = dayjs(inputDate).format('YY-MM-DD')
-        bill.VIP = JSON.parse(bill.VIP)
-        bill.SALE_LIST = JSON.parse(bill.SALE_LIST)
-      })
+
+      for (const bill of bills) {
+        const d = bill.INPUT_DATE.toISOString().replace('Z', '');
+        bill.INPUT_DATE = dayjs(d).format('YY-MM-DD');
+
+        try { bill.VIP = JSON.parse(bill.VIP) } catch { }
+        try { bill.SALE_LIST = JSON.parse(bill.SALE_LIST) } catch { }
+      }
 
       return bills
     } catch (err) {

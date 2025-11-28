@@ -1,0 +1,392 @@
+<!-- ✅ 頁面標題與提示按鈕 -->
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="mb-0">貴賓資料查詢</h2>
+  <button type="button"
+          class="btn btn-warning"
+          data-bs-toggle="modal"
+          data-bs-target="#hint1">
+    查看操作提示
+  </button>
+</div>
+
+<!-- Modal -->
+<!-- 操作提示 -->
+<div class="modal fade"
+     id="hint1"
+     tabindex="-1"
+     aria-labelledby="hintLabel"
+     aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"
+            id="hintLabel">操作提示</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        <p><span class="fs-6 badge bg-warning text-dark">1</span> 輸入查詢條件，無輸入資料為全選</p>
+        <p><span class="fs-6 badge bg-warning text-dark">2</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
+        <p>－－－－－－－－－－－－－－－－－－－－－－－－－－－－－</p>
+        <p><span class="fs-6 badge bg-info text-dark">注意</span> 安全設定關係，本系統只有在麻豆總部網域可以進行查詢</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 數量總覽 -->
+<div class="modal fade"
+     id="vipAmountModal"
+     tabindex="-1"
+     aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">數量總覽</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"></button>
+      </div>
+      <div class="modal-body"
+           id="vipAmountContent">
+        <!-- 回傳資料 -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ 固定頂部的控制列 -->
+<div class="bg-light sticky-top py-3"
+     style="top: 56px; z-index: 1030;">
+  <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <!-- 篩選表單 -->
+    <form action="/vip/vip-data"
+          method="POST"
+          id="vip-form">
+
+      <div class="input-group input-group-sm mb-2 ">
+        <span class="input-group-text">貴賓名稱</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="vipNameOptions"
+               name="NAME"
+               id="NAME"
+               {{#if
+               filterIn.NAME}}
+               value="{{filterIn.NAME}}"
+               {{/if}}>
+        <datalist id="vipNameOptions">
+          {{#each lists.vip}}
+          <option value="{{this.NAME}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">貴賓編號</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="vipIdOptions"
+               name="VIP_ID"
+               id="VIP_ID"
+               {{#if
+               filterIn.VIP_ID}}
+               value="{{filterIn.VIP_ID}}"
+               {{/if}}>
+        <datalist id="vipIdOptions">
+          {{#each lists.vip}}
+          <option value="{{this.VIP_ID}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">貴賓電話</span>
+        <input class="form-control"
+               style="max-width:120px;"
+               name="TEL"
+               id="TEL"
+               {{#if
+               filterIn.TEL}}
+               value="{{filterIn.TEL}}"
+               {{/if}}>
+
+        <span class="input-group-text">聯絡人</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="vipLinkmanOptions"
+               name="LINKMAN"
+               id="LINKMAN"
+               {{#if
+               filterIn.LINKMAN}}
+               value="{{filterIn.LINKMAN}}"
+               {{/if}}>
+        <datalist id="vipLinkmanOptions">
+          {{#each lists.vip}}
+          <option value="{{this.LINKMAN}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">貴賓群組</span>
+        <select class="form-select"
+                style="max-width:150px;"
+                name="vipgrp_id"
+                id="vipgrp_id">
+          <option value=""
+                  {{select
+                  filterIn.vipgrp_id ""
+                  }}>全部</option>
+          {{#each lists.vipgrp}}
+          <option value="{{this.vipgrp_id}}"
+                  {{select
+                  ../filterIn.vipgrp_id
+                  this.vipgrp_id}}>
+            {{this.vipgrp_name}}
+          </option>
+          {{/each}}
+        </select>
+
+        <span class="input-group-text">取號門市</span>
+        <select class="form-select"
+                style="max-width:120px;"
+                name="APPLY_SHOP"
+                id="APPLY_SHOP">
+          <option value=""
+                  {{select
+                  filterIn.APPLY_SHOP ""
+                  }}>全部</option>
+          {{#each lists.shop}}
+          <option value="{{this.SHOP_ID}}"
+                  {{select
+                  ../filterIn.APPLY_SHOP
+                  this.SHOP_ID}}>
+            {{this.SHOP_ID}}
+          </option>
+          {{/each}}
+        </select>
+
+      </div>
+
+      <div class="input-group input-group-sm mb-2">
+
+        <span class="input-group-text">公司名稱</span>
+        <input class="form-control"
+               style="max-width:260px;"
+               list="vipCompanyOptions"
+               name="COMPANY"
+               id="COMPANY"
+               {{#if
+               filterIn.COMPANY}}
+               value="{{filterIn.COMPANY}}"
+               {{/if}}>
+        <datalist id="vipCompanyOptions">
+          {{#each lists.vip}}
+          <option value="{{this.COMPANY}}">
+            {{/each}}
+        </datalist>
+
+        <span class="input-group-text">統一編號</span>
+        <input class="form-control"
+               style="max-width:120px;"
+               name="vip_code"
+               id="vip_code"
+               {{#if
+               filterIn.vip_code}}
+               value="{{filterIn.vip_code}}"
+               {{/if}}>
+
+        <span class="input-group-text">地址</span>
+        <input class="form-control"
+               name="ADDRESS"
+               id="ADDRESS"
+               {{#if
+               filterIn.ADDRESS}}
+               value="{{filterIn.ADDRESS}}"
+               {{/if}}>
+
+        <span class="input-group-text">備註</span>
+        <input class="form-control"
+               name="MEMO"
+               id="MEMO"
+               {{#if
+               filterIn.MEMO}}
+               value="{{filterIn.MEMO}}"
+               {{/if}}>
+
+        <span class="input-group-text">是否停用</span>
+        <select class="form-select"
+                style="max-width:145px;"
+                name="onlyDisabled"
+                id="onlyDisabled">
+          <option value="1"
+                  {{select
+                  filterIn.onlyDisabled "1"
+                  }}>啟用</option>
+          <option value="0"
+                  {{select
+                  filterIn.onlyDisabled "0"
+                  }}>停用</option>
+        </select>
+      </div>
+
+      <div class="mb-2">
+        <button type="submit"
+                form="vip-form"
+                class="btn btn-primary">查詢</button>
+        {{!-- <button id="exportDataBtn"
+                class="btn btn-success">匯出 貴賓資料</button>
+        <button id="exportBarcodeA4Btn"
+                class="btn btn-success">匯出 A4條碼單</button>
+        <button id="exportBarcodeBtn"
+                class="btn btn-success">匯出 條碼貼 </button>
+        <!-- 數量總覽 Modal --> --}}
+        <button id="vipAmountBtn"
+                class="btn btn-success">數量總覽</button>
+
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<table class="table table-striped table-hover align-middle table-bordered w-75 m-auto"
+       style="font-size: 15px;">
+  <thead class="table-dark"
+         style="position: sticky; top: 210px; z-index: 1020;">
+    <tr>
+      <th style="min-width: 60px;"
+          class="text-center">門市</th>
+      <th style="min-width: 100px; max-width: 100px;">貴賓編號</th>
+      <th style="min-width: 100px; max-width: 150px;">貴賓名稱</th>
+      <th style="min-width: 45px; max-width: 45px;">聯絡人</th>
+      <th style="min-width: 80px; max-width: 80px;">電話</th>
+      <th style="min-width: 80px; max-width: 80px;">手機</th>
+      <th style="min-width: 120px; max-width: 100px;">公司名稱</th>
+      <th style="min-width: 45px; max-width: 45px;">統一編號</th>
+      <th style="min-width: 200px; max-width: 200x;">備註一</th>
+      <th style="min-width: 80px; max-width: 80px;"></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {{#each vips}}
+    <tr>
+      <td class="text-center">{{APPLY_SHOP}}</td>
+      <td>{{VIP_ID}}</td>
+      <td>{{NAME}}</td>
+      <td>{{LINKMAN}}</td>
+      <td>{{TELEPHONE}}</td>
+      <td>{{MOBILE}}</td>
+      <td>{{COMPANY}}</td>
+      <td>{{vip_code}}</td>
+      <td>{{MEMO}}</td>
+      <td>
+        <!-- Button trigger modal -->
+        <button type="button"
+                class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#{{VIP_ID}}">
+          詳細
+        </button>
+        <!-- 詳細 Modal -->
+        <div class="modal fade"
+             id="{{VIP_ID}}"
+             tabindex="-1"
+             aria-labelledby="ModalLabel"
+             aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title fw-bold"
+                    id="exampleModalLabel">{{NAME}}</h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <table class="table">
+                  <tbody>
+                    <tr>
+                      <th scope="row">貴賓編號</th>
+                      <td>{{VIP_ID}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">貴賓群組</th>
+                      <td>{{vipgrp_name}}</td>
+                    </tr>
+                  </tbody>
+                  <tbody>
+                    <tr>
+                      <th scope="row">聯絡人</th>
+                      <td>{{LINKMAN}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">電話</th>
+                      <td>{{MOBILE}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">手機</th>
+                      <td>{{TELEPHONE}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Email</th>
+                      <td>{{EMAIL}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">住址</th>
+                      <td>{{ADDRESS}}</td>
+                    </tr>
+                  </tbody>
+                  <tbody>
+                    <tr>
+                      <th scope="row">公司名稱</th>
+                      <td>{{COMPANY}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">公司統編</th>
+                      <td>{{vip_code}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">公司地址</th>
+                      <td>{{COMPANY_ADDR}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">備註一</th>
+                      <td>{{MEMO}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">備註二</th>
+                      <td>{{iccardno}}</td>
+                    </tr>
+                  </tbody>
+                  <tbody>
+                    <tr>
+                      <th scope="row">取號門市</th>
+                      <td>{{APPLY_SHOP}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">取號時間</th>
+                      <td>{{APPLY_DATE}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">建立時間</th>
+                      <td>{{modify_date}}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">最後更新</th>
+                      <td>{{last_update}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </td>
+      {{/each}}
+  </tbody>
+</table>
+
+<script src="/js/vipQuery.js"></script>

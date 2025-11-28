@@ -2,7 +2,7 @@ const dayjs = require('dayjs')
 const { poolPromise } = require('../config/db')
 const shopData = require('../models/shopModel')
 const vipData = require('../models/vipModel')
-const prodData = require('../models/productModel')
+const prodData = require('./prodModel')
 
 function filterToCheck(list, filterValue, keyField, checkName, filterOut) {
   filterValue = filterValue || null
@@ -234,13 +234,16 @@ const saleData = {
 
       const sales = result.recordset
 
-      await sales.forEach(sale => {
-        const date = sale.SALE_DATE.toISOString().replace('Z', '')
-        sale.SALE_DATE = dayjs(date).format('YY-MM-DD HH:mm')
-        sale.VIP = JSON.parse(sale.VIP)
-        sale.PROD_LIST = JSON.parse(sale.PROD_LIST)
-        sale.PROD_COUNT = sale.PROD_LIST.length
-      })
+      for (const sale of sales) {
+        const d = sale.SALE_DATE.toISOString().replace('Z', '');
+        sale.SALE_DATE = dayjs(d).format('YY-MM-DD HH:mm');
+
+        try { sale.VIP = JSON.parse(sale.VIP) } catch { }
+        try { sale.PROD_LIST = JSON.parse(sale.PROD_LIST) } catch { }
+
+        sale.PROD_COUNT = sale.PROD_LIST?.length || 0;
+      }
+
       return [sales, lists]
     } catch (err) {
       console.error('資料取得失敗：', err)
