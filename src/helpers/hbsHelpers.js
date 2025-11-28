@@ -1,27 +1,45 @@
-// helpers/hbsHelpers.js
 module.exports = {
-  // 基本條件判斷 (相等)
   eq: (a, b) => a === b,
-
-  // 三元判斷 (類似 JS ? :)
   ternary: (condition, valTrue, valFalse) => (condition ? valTrue : valFalse),
-
-  // 格式化日期
   formatDate: (date) => {
     if (!date) return ''
     const d = new Date(date)
-    return d.toISOString().split('T')[0] // YYYY-MM-DD
+    return d.toISOString().split('T')[0]
   },
-
-  // 下拉選單自動選取
   select: (selected, value) => (selected === value ? 'selected' : ''),
+  optionLabel: (a, b) => (a ? b ? `${b}<br>${a}` : a : b),
+  json: (context) => JSON.stringify(context),
 
-  // 將 ID & 名稱合併
-  optionLabel: (a, b) => {
-    const index = a ? b ? `${b}<br>${a}` : a : b
-    return index
-  },
+  ifEquals: (a, b, options) => options?.fn ? (a === b ? options.fn(this) : options.inverse(this)) : a === b,
+  gt: (a, b, options) => options?.fn ? (a > b ? options.fn(this) : options.inverse(this)) : a > b,
+  lt: (a, b, options) => options?.fn ? (a < b ? options.fn(this) : options.inverse(this)) : a < b,
+  increment: (val) => val + 1,
+  decrement: (val) => val - 1,
 
-  // to json
-  json: (context) => JSON.stringify(context)
+  paginationPages: (currentPage, totalPages, options) => {
+    currentPage = Number(currentPage) || 1
+    totalPages = Number(totalPages) || 1
+
+    let startPage = 1
+    let endPage = totalPages
+
+    if (totalPages > 10) {
+      if (currentPage <= 6) {
+        startPage = 1
+        endPage = 10
+      } else if (currentPage + 4 >= totalPages) {
+        startPage = totalPages - 9
+        endPage = totalPages
+      } else {
+        startPage = currentPage - 5
+        endPage = currentPage + 4
+      }
+    }
+
+    let result = ''
+    for (let i = startPage; i <= endPage; i++) {
+      result += options.fn({ page: i, currentPage })
+    }
+    return result
+  }
 }

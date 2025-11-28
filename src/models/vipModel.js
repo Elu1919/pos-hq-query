@@ -1,5 +1,6 @@
 const dayjs = require('dayjs')
 const { poolPromise } = require('../config/db')
+const { calculatePagination } = require('../utils/pagination')
 const shopData = require('../models/shopModel')
 
 async function getLists() {
@@ -19,12 +20,91 @@ async function getLists() {
 }
 
 const vipData = {
-  getAllVipData: async (filter) => {
+  getAllVipData: async (filter, page, pageSize) => {
 
     const lists = await getLists()
 
+    const pageNum = Number(page) || 1
+    const pageSizeNum = Number(pageSize) || 20
+
     try {
       const pool = await poolPromise
+
+      const countResult = await pool.request()
+        .query(`
+          DECLARE @VipId       NVARCHAR(50)  = '${filter.VIP_ID}'
+          DECLARE @VipName     NVARCHAR(50)  = '${filter.NAME}'
+          DECLARE @Memo        NVARCHAR(200) = '${filter.MEMO}'   
+          DECLARE @Telephone   NVARCHAR(30)  = '${filter.TEL}'
+          DECLARE @Linkman     NVARCHAR(50)  = '${filter.LINKMAN}'
+          DECLARE @Company     NVARCHAR(100) = '${filter.COMPANY}'
+          DECLARE @Address     NVARCHAR(200) = '${filter.ADDRESS}' 
+          DECLARE @VipGrpId    NVARCHAR(50)  = '${filter.vipgrp_id}'
+          DECLARE @VipCode     NVARCHAR(20)  = '${filter.vip_code}'
+          DECLARE @ApplyShop   NVARCHAR(20)  = '${filter.APPLY_SHOP}'
+          DECLARE @DisabledOnly BIT = ${filter.onlyDisabled || 0}   -- 0 = 只搜尋停用, 1 = 排除停用
+
+          SELECT COUNT(*) AS total
+          FROM VIP00 v
+          LEFT JOIN vip_group00 g
+              ON v.vipgrp_id = g.vipgrp_id
+          WHERE 1 = 1
+              AND (@VipId      = '' OR v.VIP_ID LIKE '%' + @VipId + '%')
+              AND (@VipName    = '' OR v.NAME LIKE '%' + @VipName + '%')
+
+              -- MEMO + iccardno
+              AND (
+                      @Memo = '' 
+                      OR v.MEMO     LIKE '%' + @Memo + '%'
+                      OR v.iccardno LIKE '%' + @Memo + '%'
+                  )
+
+              -- 電話 + 手機
+              AND (
+                      @Telephone = '' 
+                      OR v.TELEPHONE LIKE '%' + @Telephone + '%'
+                      OR v.MOBILE    LIKE '%' + @Telephone + '%'
+                  )
+
+              AND (@Linkman    = '' OR v.LINKMAN LIKE '%' + @Linkman + '%')
+              AND (@Company    = '' OR v.COMPANY LIKE '%' + @Company + '%')
+
+              -- ADDRESS + COMPANY_ADDR
+              AND (
+                      @Address = ''
+                      OR v.ADDRESS       LIKE '%' + @Address + '%'
+                      OR v.COMPANY_ADDR  LIKE '%' + @Address + '%'
+                  )
+
+              AND (@VipGrpId = '' OR v.vipgrp_id = @VipGrpId)
+              AND (@VipCode    = '' OR v.vip_code LIKE '%' + @VipCode + '%')
+              AND (@ApplyShop  = '' OR v.APPLY_SHOP = @ApplyShop)
+
+              -- 排除停用
+              AND (
+                      (@DisabledOnly = 0 AND v.NAME LIKE '%停用%') 
+                      OR
+                      (@DisabledOnly = 1 AND v.NAME NOT LIKE '%停用%')
+                  )
+
+              -- 排除空號邏輯
+              AND (
+                      (
+                          (v.VIP_ID LIKE 'CR%' OR v.VIP_ID LIKE 'B2B%' OR v.VIP_ID LIKE 'SALE%')
+                          AND v.VIP_ID <> v.NAME
+                      )
+                      OR
+                      (
+                          v.VIP_ID LIKE 'CUST%'
+                          AND (v.TELEPHONE IS NOT NULL OR v.MOBILE IS NOT NULL)
+                      )
+                  )
+              AND v.VIP_ID NOT LIKE 'TEST%'
+        `)
+
+      const totalCount = countResult.recordset[0].total
+      const { totalPages, offset } = calculatePagination(totalCount, page, pageSize)
+
       const result = await pool.request()
         .query(`
               DECLARE @VipId       NVARCHAR(50)  = '${filter.VIP_ID}'
@@ -116,8 +196,8 @@ const vipData = {
                       )
                   AND v.VIP_ID NOT LIKE 'TEST%'
 
-              ORDER BY v.VIP_ID;
-
+              ORDER BY v.VIP_ID
+              OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY
               `)
 
       const vips = result.recordset
@@ -134,7 +214,7 @@ const vipData = {
         }
       }
 
-      return [vips, lists]
+      return [vips, lists, totalCount, totalPages]
 
     } catch (err) {
       console.error('資料取得失敗：', err)

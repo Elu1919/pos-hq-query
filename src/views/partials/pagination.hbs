@@ -1,0 +1,31 @@
+<nav aria-label="VIP 分頁">
+  <ul class="pagination justify-content-start mt-3">
+
+    {{#gt page 1}}
+    <li class="page-item">
+      <a class="page-link"
+         href="#"
+         onclick="submitPage(1)">第1頁</a>
+    </li>
+    {{/gt}}
+
+    {{#paginationPages page totalPages}}
+    <li class="page-item {{#ifEquals page currentPage}}active{{/ifEquals}}">
+      <a class="page-link"
+         href="#"
+         onclick="submitPage({{page}})">{{page}}</a>
+    </li>
+    {{/paginationPages}}
+
+    {{#if totalPages}}
+    {{#unless (ifEquals page totalPages)}}
+    <li class="page-item">
+      <a class="page-link"
+         href="#"
+         onclick="submitPage({{totalPages}})">第 {{totalPages}} 頁</a>
+    </li>
+    {{/unless}}
+    {{/if}}
+
+  </ul>
+</nav>
