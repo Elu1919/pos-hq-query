@@ -1,15 +1,44 @@
 const vipData = require('../models/vipModel')
+const shopData = require('../models/shopModel')
 const { calculatePagination } = require('../utils/pagination')
+
+async function getLists() {
+  try {
+    const [shop, vip, vipgrp] = await Promise.all([
+      shopData.getShopList(),
+      vipData.getVipList(),
+      vipData.getVipGrpList()
+    ])
+
+    return { shop, vip, vipgrp }
+
+  } catch (err) {
+    console.error('❌ 抓取清單資料失敗：', err)
+    throw err
+  }
+}
 
 const vipController = {
   showVipDetails: async (req, res) => {
     const filterIn = { ...req.body }
-    const page = Number(req.body?.page) || 1
-    const pageSize = Number(req.body?.pageSize) || 20
 
     try {
-      const [vips, lists, totalCount, totalPages] = await vipData.getAllVipData(filterIn, page, pageSize)
-      res.render('vipQuery', { vips, lists, filterIn, page, pageSize, totalCount, totalPages })
+      const lists = await getLists()
+      const { vips, totalCount } = await vipData.getAllVipData(filterIn)
+
+      res.render('vipQuery', { vips, lists, filterIn, totalCount })
+    } catch (err) {
+      console.error('❌ VIP資料取得失敗', err)
+      res.status(500).send('資料取得失敗')
+    }
+  },
+
+  VipExportDetails: async (req, res) => {
+    const filterIn = { ...req.body }
+
+    try {
+      const [vips] = await vipData.getAllVipData(filterIn)
+      res.render('vipExport', { vips })
     } catch (err) {
       console.error('❌ VIP資料取得失敗', err)
       res.status(500).send('資料取得失敗')
