@@ -1,0 +1,73 @@
+<div class="modal fade"
+     id="exportA4Modal"
+     tabindex="-1"
+     aria-labelledby="hintLabel"
+     data-bs-backdrop="static"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold">請選欲列印貴賓</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body pt-0">
+        {{#if vips.length}}
+        <form method="POST"
+              action="#"
+              id="vipExportA4-form">
+          <!-- sticky 按鈕 -->
+          <div style="position: sticky; top: 0; z-index: 1040; background: #f8f9fa; padding-bottom: 5px;">
+            <div class="d-flex justify-content-between align-items-center mb-2 pt-2 px-2 gap-3">
+              <div class="d-flex gap-3">
+                <button type="button"
+                        class="btn btn-sm btn-primary"
+                        id="btnSelectAllA4">全選</button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        id="btnUnselectAllA4">全部取消</button>
+              </div>
+              <button type="submit"
+                      class="btn btn-sm btn-success">送出</button>
+            </div>
+          </div>
+
+          <table class="table table-bordered table-hover align-middle"
+                 style="table-layout: fixed; width: 100%;">
+            <thead class="bg-light"
+                   style="position: sticky; top: 50px; z-index: 1030;">
+              <tr class="align-middle">
+                <th class="text-center"
+                    style="width: 60px;">勾選</th>
+                <th style="min-width: 30px;">貴賓名稱</th>
+                <th style="width: 5px;"></th>
+                <th class="text-center"
+                    style="width: 60px;">勾選</th>
+                <th style="min-width: 30px;">貴賓名稱</th>
+                <th style="width: 5px;"></th>
+                <th class="text-center"
+                    style="width: 60px;">勾選</th>
+                <th style="min-width: 30px;">貴賓名稱</th>
+              </tr>
+            </thead>
+            <tbody id="vip-raw-data-a4"
+                   class="d-none">
+              {{#each vips}}
+              <tr>
+                <td>{{VIP_ID}}</td>
+                <td>{{NAME}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+            <tbody id="vip-table-body-a4"></tbody>
+          </table>
+        </form>
+        {{else}}
+        <div class="alert alert-warning mt-3">請先查詢貴賓，資料會顯示於此</div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</div>
