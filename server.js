@@ -6,6 +6,7 @@ const hbsHelpers = require('./src/helpers/hbsHelpers')
 const saleRoutes = require('./src/routes/saleRoutes')
 const billRoutes = require('./src/routes/billRoutes')
 const vipRoutes = require('./src/routes/vipRoutes')
+const prodRoutes = require('./src/routes/prodRoutes')
 
 // =====================
 // 取代 __dirname，支援 pkg 打包後路徑
@@ -37,6 +38,7 @@ app.set('views', path.join(basePath, 'src/views'))
 app.use('/sale', saleRoutes)
 app.use('/bill', billRoutes)
 app.use('/vip', vipRoutes)
+app.use('/prod', prodRoutes)
 
 // 首頁導向商品查詢
 app.get('/', (req, res) => res.redirect('/sale/sale-data'))

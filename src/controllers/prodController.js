@@ -5,12 +5,15 @@ const prodData = require('../models/prodModel')
 const prodController = {
   showProdDetails: async (req, res) => {
     const filterIn = { ...req.body }
+
     try {
-      const [sales, lists] = await saleData.getAllSaleData(filterIn)
-      res.render('saleQuery', { sales, lists, filterIn })
+      const { prods, totalCount } = await prodData.getAllProdData(filterIn)
+      res.render('prodQuery', { prods, totalCount, filterIn })
+
     } catch (err) {
       res.status(500).send('資料取得失敗')
     }
+
   }
 }
 
