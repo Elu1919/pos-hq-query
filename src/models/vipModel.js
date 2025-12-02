@@ -223,6 +223,31 @@ const vipData = {
       console.error('資料取得失敗：', err)
       throw err
     }
+  },
+
+  getExportData: async (vipIds) => {
+    try {
+      const pool = await poolPromise
+      const request = pool.request()
+
+      const inClause = vipIds.map((id, index) => {
+        const varName = `vip${index}`
+        request.input(varName, id)
+        return `@${varName}`
+      }).join(',')
+
+      const result = await request.query(`
+      SELECT VIP_ID, NAME, TELEPHONE, MOBILE
+      FROM VIP00
+      WHERE VIP_ID IN (${inClause})
+    `)
+
+      return result.recordset
+
+    } catch (err) {
+      console.error('資料取得失敗：', err)
+      throw err
+    }
   }
 }
 

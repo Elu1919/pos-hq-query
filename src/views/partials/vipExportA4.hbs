@@ -16,7 +16,7 @@
       <div class="modal-body pt-0">
         {{#if vips.length}}
         <form method="POST"
-              action="#"
+              action="/vip/vip-data/export/A4barcode"
               id="vipExportA4-form">
           <!-- sticky 按鈕 -->
           <div style="position: sticky; top: 0; z-index: 1040; background: #f8f9fa; padding-bottom: 5px;">
@@ -41,15 +41,15 @@
               <tr class="align-middle">
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th style="min-width: 30px;">貴賓名稱</th>
+                <th class="col-4">貴賓名稱</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th style="min-width: 30px;">貴賓名稱</th>
+                <th class="col-4">貴賓名稱</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th style="min-width: 30px;">貴賓名稱</th>
+                <th class="col-4">貴賓名稱</th>
               </tr>
             </thead>
             <tbody id="vip-raw-data-a4"

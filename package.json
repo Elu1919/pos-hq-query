@@ -36,14 +36,17 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bwip-js": "^4.8.0",
     "crypto": "^1.0.1",
     "dayjs": "^1.11.18",
     "dotenv": "^17.2.1",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-handlebars": "^8.0.3",
+    "fontkit": "^2.0.4",
     "mssql": "^11.0.1",
     "nodemon": "^3.1.10",
+    "pdf-lib": "^1.17.1",
     "utc": "^0.1.0"
   }
 }

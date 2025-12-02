@@ -1,9 +1,14 @@
 const ExcelJS = require('exceljs')
+const bwipjs = require('bwip-js')
+const { PDFDocument } = require('pdf-lib')
+const fontkit = require('fontkit')
+
 const dayjs = require('dayjs')
 const path = require('path')
 const fs = require('fs')
 
 const saleData = require('../models/saleModel')
+const vipData = require('../models/vipModel')
 
 const formController = {
   exportSalesData: async (req, res) => {
@@ -217,7 +222,164 @@ const formController = {
     )
     await wb.xlsx.write(res)
     res.end()
+  },
+
+  exportVipA4barcode: async (req, res) => {
+    const { vipList } = req.body
+
+    const parsedList = Array.isArray(vipList)
+      ? vipList.map(item => {
+        try {
+          return JSON.parse(item)
+        } catch (err) {
+          return null
+        }
+      }).filter(Boolean)
+      : []
+
+    const vipIds = parsedList.map(v => v.VIP_ID)
+
+    try {
+      const vips = await vipData.getExportData(vipIds)
+      res.end()
+    } catch (err) {
+      res.status(500).send('資料取得失敗')
+    }
+  },
+
+  exportVipBarcode: async (req, res) => {
+    const { vipList } = req.body
+    const parsedList = Array.isArray(vipList) ? vipList : []
+    const vipIds = parsedList.map(v => v.VIP_ID)
+
+    try {
+      const vips = await vipData.getExportData(vipIds)
+
+      if (!vips) {
+        req.flash('err_msg', '無法輸出：貴賓不存在')
+        return res.redirect('/vip/vip-data')
+      }
+
+      const qtyMap = new Map(parsedList.map(item => [item.VIP_ID, item.qty]))
+
+      for (const v of vips) {
+        v.qty = qtyMap.get(v.VIP_ID) || 1
+      }
+
+      const pdfDoc = await PDFDocument.create()
+      pdfDoc.registerFontkit(fontkit)
+
+      // 載入中文字型
+      const FontPath = path.resolve('./public/fonts/NotoSansMonoCJKtc-Bold.otf')
+      const FontBytes = fs.readFileSync(FontPath)
+      const Font = await pdfDoc.embedFont(FontBytes)
+
+      // 載入中文字型
+      const FontPathR = path.resolve('./public/fonts/NotoSansMonoCJKtc-Regular.otf')
+      const FontBytesR = fs.readFileSync(FontPathR)
+      const FontR = await pdfDoc.embedFont(FontBytesR)
+
+      const MM_TO_PT = 2.835
+      const labelWidth = 40 * MM_TO_PT
+      const labelHeight = 35 * MM_TO_PT
+      const marginLeft = 2.5 * MM_TO_PT
+      const marginRight = 2.5 * MM_TO_PT
+      const usableWidth = labelWidth - marginLeft - marginRight
+      const barcodeWidth = 35 * MM_TO_PT
+
+      // ➤ 條碼內容
+      for (const vip of vips) {
+        for (let i = 0; i < vip.qty; i++) {
+
+          const page = pdfDoc.addPage([labelWidth, labelHeight])
+          const height = page.getHeight()
+
+          // 條碼圖片變數先宣告
+          let barcodeImage = null
+          let barcodeHeight = 0
+
+          // 產生條碼
+          try {
+            const pngBuffer = await bwipjs.toBuffer({
+              bcid: 'code128',
+              text: vip.VIP_ID,
+              scale: 3,
+              height: 15,
+              includetext: false,
+            })
+            barcodeImage = await pdfDoc.embedPng(pngBuffer)
+            const scale = barcodeWidth / barcodeImage.width
+            barcodeHeight = barcodeImage.height * scale
+
+          } catch (err) {
+            es.status(500).send('條碼生成失敗')
+          }
+
+          // 中文字型：貴賓名稱
+          page.drawText(vip.NAME, {
+            x: marginLeft,
+            y: height + 17 - barcodeHeight,
+            size: 10,
+            font: Font
+          })
+
+          // 電話與手機合併顯示
+          const TELEPHONE = vip.TELEPHONE || ''
+          const MOBILE = vip.MOBILE || ''
+
+          const phoneText =
+            TELEPHONE && MOBILE
+              ? `${TELEPHONE} / ${MOBILE}`
+              : TELEPHONE
+                ? TELEPHONE
+                : MOBILE
+                  ? MOBILE
+                  : ''
+
+          page.drawText(phoneText, {
+            x: marginLeft,
+            y: height + 5 - barcodeHeight,
+            size: 8,
+            font: Font
+          })
+
+          // 條碼圖片，如果生成成功才畫
+          if (barcodeImage) {
+            page.drawImage(barcodeImage, {
+              x: marginLeft + (usableWidth - barcodeWidth) / 2,
+              y: height - 38 - barcodeHeight,
+              width: barcodeWidth,
+              height: barcodeHeight,
+            })
+          }
+
+          // 英數字型：VIP_ID
+          page.drawText(vip.VIP_ID, {
+            x: marginLeft,
+            y: height - 50 - barcodeHeight,
+            size: 10,
+            font: FontR,
+          })
+        }
+      }
+
+      // PDF 輸出
+      pdfDoc.setTitle(`貴賓條碼標籤貼.pdf`)
+      const pdfBytes = await pdfDoc.save()
+
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename*=UTF-8''${encodeURIComponent('貴賓條碼標籤貼.pdf')}`
+      )
+
+      res.send(Buffer.from(pdfBytes))
+
+    } catch (err) {
+      res.status(500).send('資料取得失敗')
+    }
   }
+
 }
 
 module.exports = formController

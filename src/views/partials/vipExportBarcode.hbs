@@ -16,7 +16,7 @@
       <div class="modal-body pt-0">
         {{#if vips.length}}
         <form method="POST"
-              action="#"
+              action="/vip/vip-data/export/barcode"
               id="vipExportBarcode-form">
           <div style="position: sticky; top: 0; z-index: 1040; background: #f8f9fa; padding-bottom: 5px;">
             <div class="d-flex justify-content-between align-items-center mb-2 pt-2 px-2 gap-3">
@@ -40,19 +40,18 @@
               <tr class="align-middle">
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th style="min-width: 30px;">貴賓名稱</th>
-                <th style="width: 60px;">數量</th>
+                <th class="col-3">貴賓名稱</th>
+                <th style="width: 70px;">數量</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th style="min-width: 30px;">貴賓名稱</th>
-                <th style="width: 60px;">數量</th>
+                <th class="col-3">貴賓名稱</th>
+                <th style="width: 70px;">數量</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th style="min-width: 30px;">貴賓名稱</th>
-                <th style="width: 60px;">數量</th>
-                <th style="width: 5px;"></th>
+                <th class="col-3">貴賓名稱</th>
+                <th style="width: 70px;">數量</th>
               </tr>
             </thead>
 
