@@ -33,7 +33,10 @@ document.addEventListener('DOMContentLoaded', () => {
           tdCheck.appendChild(input)
 
           tdCheck.addEventListener('click', e => {
-            if (e.target.tagName !== 'INPUT') input.checked = !input.checked
+            if (e.target.tagName !== 'INPUT') {
+              input.checked = !input.checked
+              updateCount()
+            }
           })
 
           // name
@@ -41,13 +44,14 @@ document.addEventListener('DOMContentLoaded', () => {
           tdName.style.cursor = 'pointer'
           tdName.addEventListener('click', () => {
             input.checked = !input.checked
+            updateCount()
           })
 
           // qty
           if (addQty && tdQty) {
             const qtyInput = document.createElement('input')
             qtyInput.type = 'number'
-            qtyInput.min = 0
+            qtyInput.min = 1
             qtyInput.value = 1
             qtyInput.classList.add('form-control', 'form-control-sm', 'vip-qty')
             tdQty.appendChild(qtyInput)
@@ -72,6 +76,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnUnselectAll) btnUnselectAll.onclick = () => {
       document.querySelectorAll('#' + bodyId + ' .chk-vip').forEach(cb => cb.checked = false)
     }
+
+    // ========================= 動態顯示勾選數量 =========================
+    function updateCount() {
+      const checked = document.querySelectorAll('#' + bodyId + ' .chk-vip:checked').length
+      const counterEl = document.getElementById('count-' + bodyId.replace('vip-table-body-', ''))
+      if (counterEl) counterEl.textContent = `已勾選：${checked}`
+    }
+
+    // checkbox 事件監聽
+    body.addEventListener('change', e => {
+      if (e.target.classList.contains('chk-vip')) updateCount()
+    })
+
+    // 全選 / 全不選 後更新數量
+    if (btnSelectAll) btnSelectAll.addEventListener('click', updateCount)
+    if (btnUnselectAll) btnUnselectAll.addEventListener('click', updateCount)
+
+    // 初始化時先算一次
+    updateCount()
 
     // 送出表單時，把 VIP_ID 與對應數量一起送出
     if (formId) {
@@ -109,6 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!hasChecked) {
           e.preventDefault()
           alert('請至少勾選一筆資料再送出表單')
+        }
+
+        if (vipList.length > 900) {
+          alert('最多一次輸出 900 筆資料')
+          return
         }
 
         // 用 fetch 發送 POST，取得 PDF blob
