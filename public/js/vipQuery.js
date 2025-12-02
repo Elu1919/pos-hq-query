@@ -1,5 +1,7 @@
 // public/js/vipQuery.js
 
+
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ========================= A4 / Barcode Modal 初始化 =========================
@@ -231,38 +233,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ========================= 分頁 VIP 列表 =========================
   const pageSize = 50
-  let currentPage = 1
+  // 假設後端已將所有 VIP 資料注入到全域變數 vips 中 (在 vipQuery.hbs 中)
+  const allVips = typeof vips !== 'undefined' && Array.isArray(vips) ? vips : []
 
-  // 把函式暴露到全域，讓 HTML onclick 可正常呼叫
-  window.renderTable = function (page = 1) {
-    currentPage = page
+  /**
+   * 根據頁碼渲染當前頁面的 VIP 資料
+   * @param {number} page - 當前頁碼
+   */
+  function renderTable(page) {
     const start = (page - 1) * pageSize
-    const pageVips = vips.slice(start, start + pageSize)
+    const pageVips = allVips.slice(start, start + pageSize)
 
+    // VIP 資料渲染邏輯 (與您原本的 renderTable 邏輯相同)
     const html = pageVips.map(v => `
-    <tr>
-      <td class="text-center">${v.APPLY_SHOP || ''}</td>
-      <td>${v.VIP_ID || ''}</td>
-      <td>${v.NAME || ''}</td>
-      <td>${v.LINKMAN || ''}</td>
-      <td>${v.TELEPHONE || ''}</td>
-      <td>${v.MOBILE || ''}</td>
-      <td>${v.COMPANY || ''}</td>
-      <td>${v.vip_code || ''}</td>
-      <td>${v.MEMO || ''}</td>
-      <td>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-${v.VIP_ID}">詳細</button>
-        <div class="modal fade" id="modal-${v.VIP_ID}" tabindex="-1" aria-hidden="true">
-          <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title fw-bold">${v.NAME || ''}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                <table class="table">
-                  <tbody>
-                    ${[
+      <tr>
+        <td class="text-center">${v.APPLY_SHOP || ''}</td>
+        <td data-vip-id="${v.VIP_ID}">${v.VIP_ID || ''}</td> <td>${v.NAME || ''}</td>
+        <td>${v.LINKMAN || ''}</td>
+        <td>${v.TELEPHONE || ''}</td>
+        <td>${v.MOBILE || ''}</td>
+        <td>${v.COMPANY || ''}</td>
+        <td>${v.vip_code || ''}</td>
+        <td>${v.MEMO || ''}</td>
+        <td>
+          <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-${v.VIP_ID}">詳細</button>
+          <div class="modal fade" id="modal-${v.VIP_ID}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title fw-bold">${v.NAME || ''}</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <table class="table">
+                    <tbody>
+                      ${[
         ['貴賓編號', v.VIP_ID],
         ['貴賓群組', v.vipgrp_name],
         ['聯絡人', v.LINKMAN],
@@ -280,58 +285,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ['建立時間', v.modify_date],
         ['最後更新', v.last_update]
       ].map(([label, value]) => `<tr><th>${label}</th><td>${value || ''}</td></tr>`).join('')}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </td>
-    </tr>`).join('')
+        </td>
+      </tr>`).join('')
 
     document.getElementById('vip-table-container').innerHTML = html
-    window.renderPagination()
   }
 
-  window.renderPagination = function () {
-    const totalPages = Math.ceil(vips.length / pageSize)
-    let startPage, endPage
-
-    if (totalPages <= 10) {
-      startPage = 1
-      endPage = totalPages
-    } else {
-      startPage = currentPage - 4
-      endPage = currentPage + 5
-
-      if (startPage < 1) {
-        startPage = 1
-        endPage = 10
-      } else if (endPage > totalPages) {
-        endPage = totalPages
-        startPage = totalPages - 9
+  // 實例化 Paginator
+  if (allVips.length > 0) {
+    new Paginator(
+      'vip-pagination-client', // 使用新的 ID，代表前端分頁
+      allVips.length,
+      pageSize,
+      (newPage) => {
+        // 當 Paginator 偵測到頁碼變更時，執行 renderTable
+        renderTable(newPage);
       }
-    }
-
-    let html = ''
-
-    if (currentPage > 1 && totalPages > 10) {
-      html += `<li class="page-item"><a class="page-link" href="#" onclick="renderTable(1)">第1頁</a></li>`
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
-               <a class="page-link" href="#" onclick="renderTable(${i})">${i}</a>
-             </li>`
-    }
-
-    if (currentPage < totalPages && totalPages > 10) {
-      html += `<li class="page-item"><a class="page-link" href="#" onclick="renderTable(${totalPages})">第${totalPages}頁</a></li>`
-    }
-
-    document.getElementById('vip-pagination').innerHTML = html
+    );
   }
-
-  // 初始頁
-  window.renderTable(1)
 })

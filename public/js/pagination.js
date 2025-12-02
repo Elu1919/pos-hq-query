@@ -1,5 +1,4 @@
 // public/js/pagination.js
-
 function submitPage(page) {
   const form = document.getElementById('vip-form')
   let input = form.querySelector('input[name="page"]')

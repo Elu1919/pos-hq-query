@@ -2,7 +2,6 @@
 
 const dayjs = require('dayjs')
 const { poolPromise } = require('../config/db')
-const { calculatePagination } = require('../utils/pagination')
 
 const vipData = {
   getAllVipData: async (filter) => {
