@@ -1,3 +1,5 @@
+// src/models/saleModel.js
+
 const dayjs = require('dayjs')
 const { poolPromise } = require('../config/db')
 const shopData = require('../models/shopModel')

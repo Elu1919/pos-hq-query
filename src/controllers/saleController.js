@@ -1,3 +1,5 @@
+// src/controller/saleController.js
+
 const saleData = require('../models/saleModel')
 
 const saleController = {

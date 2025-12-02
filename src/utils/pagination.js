@@ -1,3 +1,5 @@
+// src/utils/pagination.js
+
 const calculatePagination = (totalCount, page, pageSize) => {
   page = Number(page) || 1
   pageSize = Number(pageSize) || 50

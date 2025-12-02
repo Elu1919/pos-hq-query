@@ -1,3 +1,5 @@
+// src/models/shopModel.js
+
 const { poolPromise } = require('../config/db')
 
 const shopData = {

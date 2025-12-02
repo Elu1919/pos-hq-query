@@ -1,4 +1,5 @@
 // public/js/vipQuery.js
+
 document.addEventListener('DOMContentLoaded', () => {
 
   // ========================= A4 / Barcode Modal 初始化 =========================

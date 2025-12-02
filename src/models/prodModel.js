@@ -1,3 +1,5 @@
+// src/models/prodModel.js
+
 const { poolPromise } = require('../config/db')
 
 const prodData = {

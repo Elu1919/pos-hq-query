@@ -1,3 +1,5 @@
+// src/models/billModel.js
+
 const dayjs = require('dayjs')
 const { poolPromise } = require('../config/db')
 

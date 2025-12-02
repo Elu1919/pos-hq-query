@@ -1,3 +1,5 @@
+// src/helper/hbsHelpers.js
+
 module.exports = {
   eq: (a, b) => a === b,
   ternary: (condition, valTrue, valFalse) => (condition ? valTrue : valFalse),

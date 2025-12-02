@@ -1,3 +1,5 @@
+// src/controller/vipController.js
+
 const vipData = require('../models/vipModel')
 const shopData = require('../models/shopModel')
 const { calculatePagination } = require('../utils/pagination')

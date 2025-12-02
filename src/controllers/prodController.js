@@ -1,3 +1,5 @@
+// src/controller/prodController.js
+
 const prodData = require('../models/prodModel')
 
 const prodController = {

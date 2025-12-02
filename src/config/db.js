@@ -1,3 +1,5 @@
+// src/config/db.js
+
 const sql = require('mssql')
 const crypto = require('crypto')
 const dotenv = require('dotenv')

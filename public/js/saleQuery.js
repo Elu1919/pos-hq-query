@@ -1,3 +1,5 @@
+// public/js/saleQuery.js
+
 document.getElementById('exportExcelBtn').addEventListener('click', async (e) => {
   e.preventDefault(); // ❗ 阻止表單預設提交
 

@@ -301,12 +301,20 @@
                {{/if}}>
       </div>
 
-      <div class="mb-2">
-        <button type="submit"
-                form="sale-form"
-                class="btn btn-primary">查詢</button>
-        <button id="exportExcelBtn"
-                class="btn btn-success">匯出 Excel</button>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex gap-2">
+          <button type="submit"
+                  form="sale-form"
+                  class="btn btn-primary">查詢</button>
+          {{#if sales.length}}
+          <span id="count-barcode"
+                class="fw-bold ms-2 mt-2">共 {{sales.length}} 筆</span>
+          {{/if}}
+        </div>
+        <div class="d-flex gap-2">
+          <button id="exportExcelBtn"
+                  class="btn btn-success">匯出 Excel</button>
+        </div>
       </div>
 
     </form>
