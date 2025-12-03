@@ -8,16 +8,15 @@ const prodData = {
 
     try {
       const pool = await poolPromise
-
       const result = await pool.request()
         .query(`
                 -- 宣告篩選變數
-                DECLARE @ProdId      NVARCHAR(50)  = ''
-                DECLARE @ProdName    NVARCHAR(100) = ''  -- 統一 PROD_NAME 篩選
-                DECLARE @ProdKindId  NVARCHAR(50)  = ''
-                DECLARE @DepId       NVARCHAR(50)  = ''
-                DECLARE @OnlyUsePos  BIT           = 1
-                DECLARE @IsFloat     BIT           = 0
+                DECLARE @ProdId      NVARCHAR(50)  = '${filter.PROD_ID}'
+                DECLARE @ProdName    NVARCHAR(100) = '${filter.PROD_NAME}' 
+                DECLARE @ProdKindId  NVARCHAR(50)  = '${filter.PROD_KIND}'
+                DECLARE @DepId       NVARCHAR(50)  = '${filter.DEP_ID}'
+                DECLARE @OnlyUsePos  INT           = ${filter.isusepos ?? 1}
+                DECLARE @IsFloat     INT           = ${filter.isfloat ?? -1}
 
                 SELECT
                     p00.PROD_ID,
@@ -52,16 +51,23 @@ const prodData = {
                     ON pt.TASTE_ID = t.TASTE_ID
                 WHERE 1 = 1
                     AND (@ProdId      = '' OR p00.PROD_ID LIKE '%' + @ProdId + '%')
+
                     -- PROD_NAME 同時篩選 PROD_NAME1 或 PROD_NAME2
                     AND (@ProdName    = '' OR p00.PROD_NAME1 LIKE '%' + @ProdName + '%' OR p00.PROD_NAME2 LIKE '%' + @ProdName + '%')
                     AND (@ProdKindId  = '' OR p00.PROD_KIND = @ProdKindId)
                     AND (@DepId       = '' OR p00.DEP_ID = @DepId)
+
+                    -- ▲ isusepos 過濾：-1全部, 0=停用(=0), 1=啟用(=1)
                     AND (
-                            (@OnlyUsePos = 0) 
-                            OR 
-                            (@OnlyUsePos = 1 AND p01.isusepos = 1)
+                            @OnlyUsePos = -1
+                            OR p01.isusepos = @OnlyUsePos
                         )
-                    AND (@IsFloat = -1 OR p00.isfloat = @IsFloat)  -- 可篩選 isfloat
+
+                    -- ▲ isfloat 過濾：-1全部, 0=停用, 1=啟用
+                    AND (
+                            @IsFloat = -1
+                            OR p00.isfloat = @IsFloat
+                        )
                 GROUP BY 
                     p00.PROD_ID,
                     p00.PROD_NAME1,
@@ -119,6 +125,20 @@ const prodData = {
       const result = await pool.request()
         .query(`
           SELECT DEP_ID, DEP_NAME FROM DEPARTMENT
+        `)
+      return result.recordset
+    } catch (err) {
+      console.error('資料取得失敗：', err)
+      throw err
+    }
+  },
+
+  getKindList: async () => {
+    try {
+      const pool = await poolPromise
+      const result = await pool.request()
+        .query(`
+          SELECT PROD_ID, PROD_NAME FROM prod_kind
         `)
       return result.recordset
     } catch (err) {
