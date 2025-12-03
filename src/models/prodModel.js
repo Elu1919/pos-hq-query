@@ -105,6 +105,135 @@ const prodData = {
     }
   },
 
+  getProdQua: async (prodIds) => {
+
+    try {
+      const pool = await poolPromise
+      const result = await pool.request()
+        .query(`
+               -- 宣告篩選條件
+                DECLARE @ProdIdList NVARCHAR(MAX) = '${prodIds}' 
+
+                DECLARE @inClause NVARCHAR(MAX) = ''
+                DECLARE @isEmptyList BIT = 0 -- 新增布林變數來標記列表是否為空
+                DECLARE @inCondition NVARCHAR(MAX) -- 用來存放 WHERE 條件
+
+                IF ISNULL(@ProdIdList, '') != ''
+                BEGIN
+                    -- 將輸入字串轉為 IN 子句格式：('ID1','ID2',...)
+                    SET @inClause = REPLACE(@ProdIdList, ',', ''',''')
+                    SET @inClause = '(''' + @inClause + ''')'
+                    SET @inCondition = ' PROD_ID IN ' + @inClause
+                END
+                ELSE
+                BEGIN
+                    -- 列表為空
+                    SET @isEmptyList = 1
+                    SET @inCondition = ' 1 = 1 ' -- 避免語法錯誤，設為無條件通過
+                END
+
+                -- 產生 SHOP_ID 欄位 (排除 TEST01、A)
+                DECLARE @cols NVARCHAR(MAX) = ''
+                DECLARE @sql  NVARCHAR(MAX) = ''
+
+                SELECT @cols = STRING_AGG(QUOTENAME(SHOP_ID), ',')
+                FROM (
+                    SELECT DISTINCT SHOP_ID 
+                    FROM PROD_QUANTITY
+                    WHERE SHOP_ID NOT IN ('TEST01', 'A')
+                ) AS x
+
+                -- 檢查 @cols 是否為空，如果為空，則設為一個佔位符以防止 PIVOT 語法錯誤
+                IF ISNULL(@cols, '') = ''
+                BEGIN
+                    SET @cols = 'NULL' -- 設置佔位符
+                END
+
+                -- PIVOT 查詢
+                SET @sql = '
+                    ;WITH base AS (
+                        SELECT DISTINCT 
+                            PROD_ID,
+                            PROD_NAME1
+                        FROM PRODUCT00
+                        WHERE 1 = 1
+                        -- ⬇️ 修正後的篩選邏輯：只在列表非空時應用 IN 條件 ⬇️
+                        AND (
+                              ' + CASE WHEN @isEmptyList = 1 THEN '1 = 1' ELSE @inCondition END + '
+                        )
+                    ),
+                    pivotData AS (
+                        SELECT *
+                        FROM (
+                            SELECT 
+                                PROD_ID,
+                                SHOP_ID,
+                                QUANTITY
+                            FROM PROD_QUANTITY
+                            WHERE SHOP_ID NOT IN (''TEST01'', ''A'')
+                        ) AS src
+                        PIVOT (
+                            MAX(QUANTITY) FOR SHOP_ID IN (' + @cols + ')
+                        ) AS pvt
+                    )
+                    SELECT 
+                        b.PROD_ID,
+                        b.PROD_NAME1,
+                        ' + @cols + '
+                    FROM base b
+                    LEFT JOIN pivotData pv
+                        ON b.PROD_ID = pv.PROD_ID
+                    ORDER BY b.PROD_ID
+                '
+
+                EXEC(@sql)
+                `)
+
+      const prodQuaList = result.recordset
+
+      return { prodQuaList }
+
+    } catch (err) {
+      console.error('資料取得失敗：', err)
+      throw err
+    }
+  },
+
+  getExportData: async (prodIds) => {
+    try {
+      const pool = await poolPromise
+      const request = pool.request()
+
+      const inClause = prodIds.map((id, index) => {
+        const varName = `prod${index}`
+        request.input(varName, id)
+        return `@${varName}`
+      }).join(',')
+
+      const result = await request.query(`
+        SELECT
+          T1.PROD_ID,       -- 產品編號
+          T1.PROD_NAME1,    -- 【產品名稱1 (作為備援名稱)
+          T1.PROD_NAME2,    -- 產品名稱2 (主要長名稱)
+          T2.DEP_NAME       -- 部門名稱 (類別)
+        FROM
+          PRODUCT00 AS T1
+        INNER JOIN
+          DEPARTMENT AS T2
+        ON
+          T1.DEP_ID = T2.DEP_ID 
+        WHERE
+          T1.PROD_ID IN (${inClause}) 
+      `)
+
+      return result.recordset
+
+    } catch (err) {
+      console.error('資料取得失敗：', err)
+      throw err // 重新拋出錯誤，讓呼叫方處理
+    }
+  },
+
   getProdList: async () => {
     try {
       const pool = await poolPromise

@@ -1,5 +1,5 @@
 <div class="modal fade"
-     id="exportA4Modal"
+     id="exportBarcodeModal"
      tabindex="-1"
      aria-labelledby="hintLabel"
      data-bs-backdrop="static"
@@ -14,22 +14,21 @@
       </div>
 
       <div class="modal-body pt-0">
-        {{#if vips.length}}
+        {{#if prods.length}}
         <form method="POST"
-              action="/vip/vip-data/export/A4barcode"
-              id="vipExportA4-form">
-          <!-- sticky 按鈕 -->
+              action="/prod/prod-data/export/barcode"
+              id="prodExportBarcode-form">
           <div style="position: sticky; top: 0; z-index: 1040; background: #f8f9fa; padding-bottom: 5px;">
             <div class="d-flex justify-content-between align-items-center mb-2 pt-2 px-2 gap-3">
               <div class="d-flex gap-3">
-                <span id="count-a4"
+                <span id="count-barcode"
                       class="fw-bold text-primary ms-2 mt-1"></span>
                 <button type="button"
                         class="btn btn-sm btn-primary"
-                        id="btnSelectAllA4">全選</button>
+                        id="btnSelectAllBarcode">全選</button>
                 <button type="button"
                         class="btn btn-sm btn-outline-danger"
-                        id="btnUnselectAllA4">全部取消</button>
+                        id="btnUnselectAllBarcode">全部取消</button>
               </div>
               <button type="submit"
                       class="btn btn-sm btn-success">送出</button>
@@ -43,27 +42,31 @@
               <tr class="align-middle">
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th class="col-4">貴賓名稱</th>
+                <th class="col-3">貴賓名稱</th>
+                <th style="width: 70px;">數量</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th class="col-4">貴賓名稱</th>
+                <th class="col-3">貴賓名稱</th>
+                <th style="width: 70px;">數量</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th class="col-4">貴賓名稱</th>
+                <th class="col-3">貴賓名稱</th>
+                <th style="width: 70px;">數量</th>
               </tr>
             </thead>
-            <tbody id="vip-raw-data-a4"
+
+            <tbody id="prod-raw-data-barcode"
                    class="d-none">
-              {{#each vips}}
+              {{#each prods}}
               <tr>
-                <td>{{VIP_ID}}</td>
-                <td>{{NAME}}</td>
+                <td>{{PROD_ID}}</td>
+                <td>{{PROD_NAME1}}</td>
               </tr>
               {{/each}}
             </tbody>
-            <tbody id="vip-table-body-a4"></tbody>
+            <tbody id="prod-table-body-barcode"></tbody>
           </table>
         </form>
         {{else}}

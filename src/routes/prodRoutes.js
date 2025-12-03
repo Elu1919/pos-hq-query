@@ -6,7 +6,9 @@ const formController = require('../controllers/formController')
 
 const router = express.Router()
 
-// router.post('/sale-data/export', formController.exportSalesData)
+router.post('/prod-data/export/A4barcode', formController.exportProdA4barcode)
+router.post('/prod-data/export/barcode', formController.exportProdBarcode)
+router.post('/sale-data/qua', prodController.showProdQuaDetails)
 router.get('/prod-data', prodController.showProdDetails)
 router.post('/prod-data', prodController.showProdDetails)
 router.get('/', prodController.showProdDetails)

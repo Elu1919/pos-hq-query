@@ -33,19 +33,6 @@ const vipController = {
       res.status(500).send('資料取得失敗')
     }
   },
-
-  VipExportDetails: async (req, res) => {
-    const filterIn = { ...req.body }
-
-    try {
-      const [vips] = await vipData.getAllVipData(filterIn)
-      res.render('vipExport', { vips })
-    } catch (err) {
-      console.error('❌ VIP資料取得失敗', err)
-      res.status(500).send('資料取得失敗')
-    }
-  },
-
   showVipAmount: async (req, res) => {
     try {
       const vipAmount = await vipData.getVipAmount()

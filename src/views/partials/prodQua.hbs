@@ -1,0 +1,74 @@
+<table id="prod-raw-data-qua"
+       style="display: none;">
+  <tbody>
+    {{#each prodQuaList}}
+    <tr>
+      <td>{{PROD_ID}}</td>
+      <td>{{PROD_NAME1}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+<div class="modal fade"
+     id="prodQuantityModal"
+     tabindex="-1"
+     aria-labelledby="prodModalLabel"
+     data-bs-backdrop="static"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold"
+            id="prodModalLabel">各門市庫存</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
+      </div>
+
+      <div class="modal-body pt-0">
+        <div style="position: sticky; top: 0; z-index: 1040; background: #f8f9fa; padding-bottom: 5px;">
+          <div class="d-flex justify-content-between align-items-center mb-2 pt-2 px-2 gap-3">
+            <div class="d-flex gap-3">
+              <span id="count-qua"
+                    class="fw-bold text-primary ms-2 mt-1">已勾選：0</span>
+
+              <button type="button"
+                      class="btn btn-sm btn-primary"
+                      id="btnSelectAllProdQua">全選</button>
+              <button type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      id="btnUnselectAllProdQua">全部取消</button>
+            </div>
+            <button type="submit"
+                    class="btn btn-sm btn-success">送出</button>
+          </div>
+        </div>
+
+        <table class="table table-bordered table-hover align-middle"
+               style="table-layout: fixed; width: 100%;">
+          <thead class="bg-light"
+                 style="position: sticky; top: 50px; z-index: 1030;">
+            <tr class="align-middle">
+              <th class="text-center"
+                  style="width: 60px;">勾選</th>
+              <th class="col-4">商品名稱</th>
+              <th style="width: 5px;"></th>
+              <th class="text-center"
+                  style="width: 60px;">勾選</th>
+              <th class="col-4">商品名稱</th>
+              <th style="width: 5px;"></th>
+              <th class="text-center"
+                  style="width: 60px;">勾選</th>
+              <th class="col-4">商品名稱</th>
+              <th style="width: 5px;"></th>
+            </tr>
+          </thead>
+          <tbody id="prod-table-body-qua">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

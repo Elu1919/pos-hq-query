@@ -1,35 +1,51 @@
+<table id="prod-raw-data-qua"
+       style="display: none;">
+  <tbody>
+    {{#each prods}}
+    <tr>
+      <td>{{PROD_ID}}</td>
+      <td>{{PROD_NAME1}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+
 <div class="modal fade"
-     id="exportA4Modal"
+     id="prodQuantityModal"
      tabindex="-1"
-     aria-labelledby="hintLabel"
+     aria-labelledby="prodModalLabel"
      data-bs-backdrop="static"
      aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable modal-xl">
     <div class="modal-content">
       <div class="modal-header bg-light">
-        <h5 class="modal-title fw-bold">請勾選欲列印貴賓</h5>
+        <h5 class="modal-title fw-bold"
+            id="prodModalLabel">請勾選欲查詢商品</h5>
         <button type="button"
                 class="btn-close"
-                data-bs-dismiss="modal"></button>
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
       </div>
 
       <div class="modal-body pt-0">
-        {{#if vips.length}}
+        {{#if prods.length}}
         <form method="POST"
-              action="/vip/vip-data/export/A4barcode"
-              id="vipExportA4-form">
-          <!-- sticky 按鈕 -->
+              action="/prod/sale-data/qua"
+              id="prodQua-form">
+
           <div style="position: sticky; top: 0; z-index: 1040; background: #f8f9fa; padding-bottom: 5px;">
             <div class="d-flex justify-content-between align-items-center mb-2 pt-2 px-2 gap-3">
               <div class="d-flex gap-3">
-                <span id="count-a4"
-                      class="fw-bold text-primary ms-2 mt-1"></span>
+                <span id="count-qua"
+                      class="fw-bold text-primary ms-2 mt-1">已勾選：0</span>
+
                 <button type="button"
                         class="btn btn-sm btn-primary"
-                        id="btnSelectAllA4">全選</button>
+                        id="btnSelectAllProdQua">全選</button>
                 <button type="button"
                         class="btn btn-sm btn-outline-danger"
-                        id="btnUnselectAllA4">全部取消</button>
+                        id="btnUnselectAllProdQua">全部取消</button>
               </div>
               <button type="submit"
                       class="btn btn-sm btn-success">送出</button>
@@ -43,31 +59,24 @@
               <tr class="align-middle">
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th class="col-4">貴賓名稱</th>
+                <th class="col-4">商品名稱</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th class="col-4">貴賓名稱</th>
+                <th class="col-4">商品名稱</th>
                 <th style="width: 5px;"></th>
                 <th class="text-center"
                     style="width: 60px;">勾選</th>
-                <th class="col-4">貴賓名稱</th>
+                <th class="col-4">商品名稱</th>
+                <th style="width: 5px;"></th>
               </tr>
             </thead>
-            <tbody id="vip-raw-data-a4"
-                   class="d-none">
-              {{#each vips}}
-              <tr>
-                <td>{{VIP_ID}}</td>
-                <td>{{NAME}}</td>
-              </tr>
-              {{/each}}
+            <tbody id="prod-table-body-qua">
             </tbody>
-            <tbody id="vip-table-body-a4"></tbody>
           </table>
         </form>
         {{else}}
-        <div class="alert alert-warning mt-3">請先查詢貴賓，資料會顯示於此</div>
+        <div class="alert alert-warning mt-3">查無商品資料，請先執行相關查詢。</div>
         {{/if}}
       </div>
     </div>

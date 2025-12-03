@@ -1,16 +1,16 @@
 // src/controller/formController.js
 
 const ExcelJS = require('exceljs')
-const bwipjs = require('bwip-js')
-const { PDFDocument, rgb } = require('pdf-lib')
-const fontkit = require('fontkit')
-
 const dayjs = require('dayjs')
 const path = require('path')
 const fs = require('fs')
 
+const { getSaleType, mergePhoneNumbers, chunkItems } = require('../utils/formUtils')
+const pdfService = require('../services/pdfService')
+
 const saleData = require('../models/saleModel')
 const vipData = require('../models/vipModel')
+const prodData = require('../models/prodModel')
 
 const formController = {
   exportSalesData: async (req, res) => {
@@ -239,244 +239,58 @@ const formController = {
         return res.redirect('/vip/vip-data')
       }
 
-      // ➤ PDF 相關設定（全部集中於此）
+      const { pdfDoc, fontBold, fontRegular } = await pdfService.initPdfDocument()
 
-      const pdfDoc = await PDFDocument.create()
-      pdfDoc.registerFontkit(fontkit)
+      // 提取貴賓內容的函式 (傳入 drawA4Item)
+      const getVipContent = (item, fontRegular, maxWidth) => {
+        const TELEPHONE = item.TELEPHONE || ''
+        const MOBILE = item.MOBILE || ''
+        const phoneText = mergePhoneNumbers(TELEPHONE, MOBILE)
 
-      // 字型
-      const fontBold = await pdfDoc.embedFont(
-        fs.readFileSync(path.resolve('./public/fonts/NotoSansMonoCJKtc-Bold.otf'))
-      )
-      const fontRegular = await pdfDoc.embedFont(
-        fs.readFileSync(path.resolve('./public/fonts/NotoSansMonoCJKtc-Regular.otf'))
-      )
+        const wrappedName = pdfService.wrapText(item.NAME, fontRegular, pdfService.FONT_SIZE, maxWidth)
 
-      // 尺寸換算
-      const CM_TO_PT = 28.35
-
-      // A4 頁面大小
-      const pageWidth = 21 * CM_TO_PT
-      const pageHeight = 29.7 * CM_TO_PT
-
-      // 頁邊距
-      const margin = {
-        top: 1.4 * CM_TO_PT,
-        bottom: 0.9 * CM_TO_PT,
-        left: 0.4 * CM_TO_PT,
-        right: 0.4 * CM_TO_PT,
-      }
-
-      // 列高設定（第一列與一般列）
-      const rowSet = {
-        topHight: 0.7,  // 標題列高度（cm）
-        count: 15,      // 15 列
-        hight: 1.8      // 每列 1.8 cm
-      }
-
-      const rowHeights = [
-        rowSet.topHight * CM_TO_PT,
-        ...Array(rowSet.count).fill(rowSet.hight * CM_TO_PT)
-      ]
-
-      // 欄位寬度
-      const colWidths = [
-        6.0 * CM_TO_PT, // A 欄 名稱/電話/編號
-        4.0 * CM_TO_PT, // B 欄 條碼
-        0.2 * CM_TO_PT, // C 欄 (空白區）
-        6.0 * CM_TO_PT, // D 欄 名稱/電話/編號
-        4.0 * CM_TO_PT, // E 欄 條碼
-      ]
-
-      // 全域字型大小
-      const fontSize = 10
-
-
-      // ➤ 基礎繪圖函式
-
-      const drawText = (page, text, x, y, font, size = fontSize, color = rgb(0, 0, 0), options = {}) => {
-        page.drawText(text, { x, y: y + 2, size, font, color, ...options })
-      }
-
-      const drawRect = (page, x, y, width, height, borderColor = rgb(0, 0, 0), borderWidth = 1, fillColor = null) => {
-        if (fillColor) page.drawRectangle({ x, y, width, height, color: fillColor })
-        page.drawRectangle({ x, y, width, height, borderColor, borderWidth })
-      }
-
-      const drawBarcode = async (text) => {
-        const png = await bwipjs.toBuffer({
-          bcid: 'code128',
-          text,
-          scale: 3,
-          width: 3.5 * CM_TO_PT,
-          height: 10,
-          includetext: false,
-        })
-        return await pdfDoc.embedPng(png)
-      }
-
-      const chunkItems = (vips, size) => {
-        const chunks = []
-        for (let i = 0; i < vips.length; i += size) chunks.push(vips.slice(i, i + size))
-        return chunks
+        return [...wrappedName, item.VIP_ID, phoneText]
       }
 
       const perPage = 30
       const chunks = chunkItems(vips, perPage)
 
       // ➤ PDF 內容繪製
-
       for (const chunk of chunks) {
-        const page = pdfDoc.addPage([pageWidth, pageHeight])
-        let cursorY = pageHeight - margin.top
+        const page = pdfDoc.addPage([pdfService.A4_PAGE_WIDTH, pdfService.A4_PAGE_HEIGHT])
+        let cursorY = pdfService.A4_PAGE_HEIGHT - pdfService.A4_MARGIN.top
 
-        const now = dayjs()
-        const formatted = now.format('YYMMDD HH:mm')
-
-        const headerY = pageHeight - 30
-        drawText(page, '貴賓條碼簿', margin.left, headerY, fontRegular)
-
-        const rightText = `列印日期: ${formatted}`
-        drawText(
-          page,
-          rightText,
-          pageWidth - margin.right - fontRegular.widthOfTextAtSize(rightText, fontSize),
-          headerY,
-          fontRegular
-        )
+        // 標頭
+        pdfService.drawA4Header(page, fontRegular, '貴賓條碼簿')
 
         // 標題列
-        let currentX = margin.left
-        const headerYPos = cursorY - rowHeights[0]
-
-        for (let i = 0; i < colWidths.length; i++) {
-          if (i === 2) { currentX += colWidths[i]; continue }
-
-          drawRect(page, currentX, headerYPos, colWidths[i], rowHeights[0], rgb(0, 0, 0), 1, rgb(0, 0, 0))
-
-          const headerTexts = ['名稱/電話/編號', '條碼']
-          let headerText = ''
-
-          if (i < 2) headerText = headerTexts[i]
-          else if (i > 2) headerText = headerTexts[i - 3]
-
-          const textWidth = fontBold.widthOfTextAtSize(headerText, fontSize)
-
-          drawText(
-            page,
-            headerText,
-            currentX + (colWidths[i] - textWidth) / 2,
-            headerYPos + (rowHeights[0] - fontSize) / 2 - 2,
-            fontBold,
-            fontSize,
-            rgb(1, 1, 1)
-          )
-
-          currentX += colWidths[i]
-        }
-
+        const headerYPos = pdfService.drawA4TitleRow(page, fontBold, ['名稱/電話/編號', '條碼'], cursorY)
         cursorY = headerYPos
 
-        for (let row = 0; row < rowSet.count; row++) {
-          const leftItem = chunk[row]
-          const rightItem = chunk[row + perPage / 2]
+        for (let row = 1; row <= pdfService.A4_ROW_SET.count; row++) {
+          const listIndex = row - 1
+          const leftItem = chunk[listIndex]
+          const rightItem = chunk[listIndex + perPage / 2]
 
-          const drawItem = async (item, startX, colOffset) => {
-            if (!item || !item.NAME) return
+          // 繪製左欄
+          await pdfService.drawA4Item(
+            pdfDoc, page, leftItem, pdfService.A4_MARGIN.left, 0,
+            row, cursorY, fontRegular, getVipContent
+          )
 
-            const barcodeImg = await drawBarcode(item.VIP_ID)
-            const barcodeWidth = 3.5 * CM_TO_PT
-            const barcodeHeight = 1 * CM_TO_PT
-            const barcodeX = startX + colWidths[colOffset] + 7
-            const barcodeY =
-              cursorY - rowHeights[row + 1] +
-              (rowHeights[row + 1] - barcodeHeight) / 2
+          // 繪製右欄
+          const rightStartX = pdfService.A4_MARGIN.left + pdfService.A4_COL_WIDTHS.slice(0, 3).reduce((a, b) => a + b, 0)
+          await pdfService.drawA4Item(
+            pdfDoc, page, rightItem, rightStartX, 3,
+            row, cursorY, fontRegular, getVipContent
+          )
 
-            page.drawImage(barcodeImg, {
-              x: barcodeX,
-              y: barcodeY,
-              width: barcodeWidth,
-              height: barcodeHeight
-            })
-
-            const nameY = barcodeY + barcodeHeight - 8
-            const TELEPHONE = item.TELEPHONE || ''
-            const MOBILE = item.MOBILE || ''
-
-            const phoneText =
-              TELEPHONE && MOBILE
-                ? `${TELEPHONE} / ${MOBILE}`
-                : TELEPHONE
-                  ? TELEPHONE
-                  : MOBILE
-                    ? MOBILE
-                    : ''
-
-            const vipId = item.VIP_ID
-
-            const maxWidth = colWidths[colOffset + 1] - 10
-
-            const wrapText = (text, font, fontSize, maxWidth) => {
-              const chars = text.split('')
-              let lines = []
-              let currentLine = ''
-              chars.forEach(c => {
-                const testLine = currentLine + c
-                const testWidth = font.widthOfTextAtSize(testLine, fontSize)
-                if (testWidth > maxWidth && currentLine.length > 0) {
-                  lines.push(currentLine)
-                  currentLine = c
-                } else {
-                  currentLine = testLine
-                }
-              })
-              if (currentLine) lines.push(currentLine)
-              return lines
-            }
-
-            const wrappedName = wrapText(item.NAME, fontRegular, fontSize, maxWidth)
-            const totalLines = [...wrappedName, vipId, phoneText]
-
-            totalLines.forEach((line, idx) => {
-              const textX = startX + 7
-              const textY = nameY - idx * (fontSize + 3)
-
-              const isVipId = line === vipId
-              const color = isVipId ? rgb(0.3, 0.3, 0.3) : rgb(0, 0, 0)
-
-              drawText(page, line, textX, textY, fontRegular, fontSize, color)
-            })
-          }
-
-          await drawItem(leftItem, margin.left, 0)
-
-          const rightStartX = margin.left + colWidths.slice(0, 3).reduce((a, b) => a + b, 0)
-
-          await drawItem(rightItem, rightStartX, 3)
-
-          // 左半邊 AB 欄
-          let leftX = margin.left
-          for (let i = 0; i <= 1; i++) {
-            drawRect(page, leftX, cursorY - rowHeights[row + 1], colWidths[i], rowHeights[row + 1])
-            leftX += colWidths[i]
-          }
-
-          const dX = margin.left + colWidths.slice(0, 2).reduce((a, b) => a + b, 0)
-
-          let rightX = dX + colWidths[2] // 跳過 D 欄
-
-          for (let i = 3; i <= 4; i++) {
-            drawRect(page, rightX, cursorY - rowHeights[row + 1], colWidths[i], rowHeights[row + 1])
-            rightX += colWidths[i]
-          }
-
-          cursorY -= rowHeights[row + 1]
+          // 繪製邊框
+          cursorY = pdfService.drawA4Border(page, cursorY, row)
         }
       }
 
-
-      // ➤ PDF 輸出
-
+      // ➤ PDF 輸出 (抽出為共用邏輯)
       pdfDoc.setTitle('貴賓A4條碼簿.pdf')
       const pdfBytes = await pdfDoc.save()
 
@@ -504,99 +318,23 @@ const formController = {
       }
 
       const qtyMap = new Map(parsedList.map(item => [item.VIP_ID, item.qty]))
-
       for (const v of vips) {
         v.qty = qtyMap.get(v.VIP_ID) || 1
       }
 
-      const pdfDoc = await PDFDocument.create()
-      pdfDoc.registerFontkit(fontkit)
+      const { pdfDoc, fontBold, fontRegular } = await pdfService.initPdfDocument()
 
-      const Font = await pdfDoc.embedFont(fs.readFileSync(path.resolve('./public/fonts/NotoSansMonoCJKtc-Bold.otf')))
-      const FontR = await pdfDoc.embedFont(fs.readFileSync(path.resolve('./public/fonts/NotoSansMonoCJKtc-Regular.otf')))
-
-      const MM_TO_PT = 2.835
-      const labelWidth = 40 * MM_TO_PT
-      const labelHeight = 35 * MM_TO_PT
-      const marginLeft = 2.5 * MM_TO_PT
-      const marginRight = 2.5 * MM_TO_PT
-      const usableWidth = labelWidth - marginLeft - marginRight
-      const barcodeWidth = 35 * MM_TO_PT
+      // 提取貴賓電話/手機的函式 (傳入 drawLabelSticker)
+      const getVipDepContent = (item) => {
+        return mergePhoneNumbers(item.TELEPHONE, item.MOBILE)
+      }
 
       // ➤ 條碼內容
       for (const vip of vips) {
-        for (let i = 0; i < vip.qty; i++) {
-
-          const page = pdfDoc.addPage([labelWidth, labelHeight])
-          const height = page.getHeight()
-
-          // 條碼圖片變數先宣告
-          let barcodeImage = null
-          let barcodeHeight = 0
-
-          // 產生條碼
-          try {
-            const pngBuffer = await bwipjs.toBuffer({
-              bcid: 'code128',
-              text: vip.VIP_ID,
-              scale: 3,
-              height: 15,
-              includetext: false,
-            })
-            barcodeImage = await pdfDoc.embedPng(pngBuffer)
-            const scale = barcodeWidth / barcodeImage.width
-            barcodeHeight = barcodeImage.height * scale
-
-          } catch (err) {
-            es.status(500).send('條碼生成失敗')
-          }
-
-          // 中文字型：貴賓名稱
-          page.drawText(vip.NAME, {
-            x: marginLeft,
-            y: height + 17 - barcodeHeight,
-            size: 10,
-            font: Font
-          })
-
-          // 電話與手機合併顯示
-          const TELEPHONE = vip.TELEPHONE || ''
-          const MOBILE = vip.MOBILE || ''
-
-          const phoneText =
-            TELEPHONE && MOBILE
-              ? `${TELEPHONE} / ${MOBILE}`
-              : TELEPHONE
-                ? TELEPHONE
-                : MOBILE
-                  ? MOBILE
-                  : ''
-
-          page.drawText(phoneText, {
-            x: marginLeft,
-            y: height + 5 - barcodeHeight,
-            size: 8,
-            font: Font
-          })
-
-          // 條碼圖片，如果生成成功才畫
-          if (barcodeImage) {
-            page.drawImage(barcodeImage, {
-              x: marginLeft + (usableWidth - barcodeWidth) / 2,
-              y: height - 38 - barcodeHeight,
-              width: barcodeWidth,
-              height: barcodeHeight,
-            })
-          }
-
-          // 英數字型：VIP_ID
-          page.drawText(vip.VIP_ID, {
-            x: marginLeft,
-            y: height - 50 - barcodeHeight,
-            size: 10,
-            font: FontR,
-          })
-        }
+        await pdfService.drawLabelSticker(
+          pdfDoc, vip, fontBold, fontRegular, vip.qty,
+          'VIP_ID', 'NAME', getVipDepContent
+        )
       }
 
       // PDF 輸出
@@ -608,13 +346,150 @@ const formController = {
         'Content-Disposition',
         `inline; filename*=UTF-8''${encodeURIComponent('貴賓條碼標籤貼.pdf')}`
       )
-
       res.send(Buffer.from(pdfBytes))
 
     } catch (err) {
       res.status(500).send('資料取得失敗')
     }
-  }
+  },
+
+  exportProdA4barcode: async (req, res) => {
+    const { prodIdList } = req.body
+    const parsedList = Array.isArray(prodIdList) ? prodIdList : []
+    const prodIds = parsedList.map(v => v.PROD_ID)
+
+    try {
+      // 注意：此處 prodData.getExportData 已經在 prodModel.js 中修正，會包含 PROD_ID 和 PROD_NAME1
+      const products = await prodData.getExportData(prodIds)
+
+      if (!products || !products.length) {
+        return res.status(404).send('無法輸出：產品不存在')
+      }
+
+      const { pdfDoc, fontBold, fontRegular } = await pdfService.initPdfDocument()
+
+      // 提取產品內容的函式 (傳入 drawA4Item)
+      const getProdContent = (item, fontRegular, maxWidth) => {
+        // 【關鍵修正】：確保 PROD_NAME2 和 DEP_NAME 即使為 null/undefined 也能安全地轉換為字串
+
+        // 1. 取得要換行的名稱，並確保它是字串
+        // item.PROD_NAME1 來自資料庫，作為 PROD_NAME2 的備援
+        const nameToWrap = String(item.PROD_NAME2 || item.PROD_NAME1 || '')
+
+        // 2. 進行換行處理
+        const wrappedName = pdfService.wrapText(nameToWrap, fontRegular, pdfService.FONT_SIZE, maxWidth)
+
+        // 3. 組合內容陣列，確保 PROD_ID 和 DEP_NAME 都是字串
+        return [
+          ...wrappedName,
+          String(item.PROD_ID || ''), // 確保 PROD_ID 為字串
+          String(item.DEP_NAME || '') // 確保 DEP_NAME 即使是 null 也能轉換為空字串
+        ]
+      }
+
+      const perPage = 30
+      const chunks = chunkItems(products, perPage)
+
+      // ➤ PDF 內容繪製
+      for (const chunk of chunks) {
+        const page = pdfDoc.addPage([pdfService.A4_PAGE_WIDTH, pdfService.A4_PAGE_HEIGHT])
+        let cursorY = pdfService.A4_PAGE_HEIGHT - pdfService.A4_MARGIN.top
+
+        // 標頭
+        pdfService.drawA4Header(page, fontRegular, '產品條碼簿')
+
+        // 標題列
+        const headerYPos = pdfService.drawA4TitleRow(page, fontBold, ['名稱/編號/類別', '條碼'], cursorY)
+        cursorY = headerYPos
+
+        for (let row = 1; row <= pdfService.A4_ROW_SET.count; row++) {
+          const listIndex = row - 1
+          const leftItem = chunk[listIndex]
+          const rightItem = chunk[listIndex + perPage / 2]
+
+          // 繪製左欄
+          await pdfService.drawA4Item(
+            pdfDoc, page, leftItem, pdfService.A4_MARGIN.left, 0,
+            row, cursorY, fontRegular, getProdContent
+          )
+
+          // 繪製右欄
+          const rightStartX = pdfService.A4_MARGIN.left + pdfService.A4_COL_WIDTHS.slice(0, 3).reduce((a, b) => a + b, 0)
+          await pdfService.drawA4Item(
+            pdfDoc, page, rightItem, rightStartX, 3,
+            row, cursorY, fontRegular, getProdContent
+          )
+
+          // 繪製邊框
+          cursorY = pdfService.drawA4Border(page, cursorY, row)
+        }
+      }
+
+      // ➤ PDF 輸出
+      pdfDoc.setTitle('產品A4條碼簿.pdf')
+      const pdfBytes = await pdfDoc.save()
+
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent('產品A4條碼簿.pdf')}`)
+      res.send(Buffer.from(pdfBytes))
+
+    } catch (err) {
+      console.error('產品 A4 條碼 PDF 生成失敗', err)
+      res.status(500).send('資料取得失敗')
+    }
+  },
+
+  exportProdBarcode: async (req, res) => {
+    const { prodIdList } = req.body
+    const parsedList = Array.isArray(prodIdList) ? prodIdList : []
+    const prodIds = parsedList.map(v => v.PROD_ID)
+
+    try {
+      const products = await prodData.getExportData(prodIds)
+
+      if (!products) {
+        return res.status(404).send('無法輸出：產品不存在')
+      }
+
+      const qtyMap = new Map(parsedList.map(item => [item.PROD_ID, item.qty]))
+
+      for (const p of products) {
+        p.qty = qtyMap.get(p.PROD_ID) || 1
+      }
+
+      const { pdfDoc, fontBold, fontRegular } = await pdfService.initPdfDocument()
+
+      // 產品標籤沒有附屬資訊，留空
+      const getProdDepContent = (item) => {
+        // 產品名稱已在 drawLabelSticker 繪製，這裡僅繪製類別或留空
+        return item.DEP_NAME || ''
+      }
+
+      // ➤ 條碼內容
+      for (const prod of products) {
+        await pdfService.drawLabelSticker(
+          pdfDoc, prod, fontBold, fontRegular, prod.qty,
+          'PROD_ID', 'PROD_NAME1', getProdDepContent
+        )
+      }
+
+      // PDF 輸出
+      pdfDoc.setTitle(`產品條碼標籤貼.pdf`)
+      const pdfBytes = await pdfDoc.save()
+
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename*=UTF-8''${encodeURIComponent('產品條碼標籤貼.pdf')}`
+      )
+
+      res.send(Buffer.from(pdfBytes))
+
+    } catch (err) {
+      console.error('產品條碼標籤貼 PDF 生成失敗', err)
+      res.status(500).send('資料取得失敗')
+    }
+  },
 
 }
 

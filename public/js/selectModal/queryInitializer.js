@@ -3,7 +3,7 @@
 // 確保 DOM 加載完畢再執行初始化
 document.addEventListener('DOMContentLoaded', () => {
 
-  // 處理 VIP 列表 - A4 (不需要數量)
+  // VIP 列表 - A4 (不需要數量)
   window.initGenericSelectModal({
     rawId: 'vip-raw-data-a4',
     bodyId: 'vip-table-body-a4',
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     formId: 'vipExportA4-form'
   })
 
-  // 處理 VIP 列表 - Barcode (需要數量)
+  // VIP 列表 - Barcode (需要數量)
   window.initGenericSelectModal({
     rawId: 'vip-raw-data-barcode',
     bodyId: 'vip-table-body-barcode',
@@ -27,15 +27,40 @@ document.addEventListener('DOMContentLoaded', () => {
     formId: 'vipExportBarcode-form'
   })
 
-  // 假設：新增一個產品列表 (Prod) 處理
-  // initGenericSelectModal({
-  //   rawId: 'prod-raw-data',
-  //   bodyId: 'prod-table-body',
-  //   dataIdAttribute: 'prodId',
-  //   listKeyName: 'PROD_ID',
-  //   btnSelectAllId: 'btnSelectAllProd',
-  //   btnUnselectAllId: 'btnUnselectAllProd',
-  //   addQty: true,
-  //   formId: 'prodExport-form'
-  // })
+  // PROD QTY 列表 (不需要數量)
+  window.initGenericSelectModal({
+    rawId: 'prod-raw-data-qua',
+    bodyId: 'prod-table-body-qua',
+    dataIdAttribute: 'prodId',
+    listKeyName: 'PROD_ID',
+    btnSelectAllId: 'btnSelectAllProdQua',
+    btnUnselectAllId: 'btnUnselectAllProdQua',
+    addQty: false,
+    formId: 'prodQua-form'
+  })
+
+  // PROD 列表 - A4 (不需要數量)
+  window.initGenericSelectModal({
+    rawId: 'prod-raw-data-a4',
+    bodyId: 'prod-table-body-a4',
+    dataIdAttribute: 'prodId',
+    listKeyName: 'PROD_ID',
+    btnSelectAllId: 'btnSelectAllA4',
+    btnUnselectAllId: 'btnUnselectAllA4',
+    addQty: false,
+    formId: 'prodExportA4-form'
+  })
+
+  // PROD 列表 - Barcode (需要數量)
+  window.initGenericSelectModal({
+    rawId: 'prod-raw-data-barcode',
+    bodyId: 'prod-table-body-barcode',
+    dataIdAttribute: 'prodId',
+    listKeyName: 'PROD_ID',
+    btnSelectAllId: 'btnSelectAllBarcode',
+    btnUnselectAllId: 'btnUnselectAllBarcode',
+    addQty: true,
+    formId: 'prodExportBarcode-form'
+  })
+
 })

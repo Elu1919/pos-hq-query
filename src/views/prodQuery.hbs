@@ -56,6 +56,10 @@
     </div>
   </div>
 </div>
+{{>prodQuaSearch}}
+{{>prodQua}}
+{{>prodExportA4}}
+{{>prodExportBarcode}}
 
 <!-- ✅ 固定頂部的控制列 -->
 <div class="bg-light sticky-top py-2"
@@ -130,7 +134,7 @@
           {{#each lists.kind}}
           <option value="{{this.PROD_ID}}"
                   {{select
-                  ../filterIn.PROD_ID
+                  ../filterIn.PROD_KIND
                   this.PROD_ID}}>
             {{this.PROD_NAME}}
           </option>
@@ -189,6 +193,20 @@
                   class="btn btn-success"
                   data-bs-toggle="modal"
                   data-bs-target="#exportA4Modal">
+            匯出 A4條碼簿
+          </button>
+          <button type="button"
+                  id="exportBarcodeBtn"
+                  class="btn btn-success"
+                  data-bs-toggle="modal"
+                  data-bs-target="#exportBarcodeModal">
+            匯出 標籤貼
+          </button>
+          <button type="button"
+                  id="prodQuantityBtn"
+                  class="btn btn-warning"
+                  data-bs-toggle="modal"
+                  data-bs-target="#prodQuantityModal">
             查看庫存
           </button>
         </div>
@@ -229,4 +247,6 @@
 <script> const prods = {{{ json prods }}} </script>
 <script src="/js/pagination/Paginator.js"></script>
 <script src="/js/pagination/pagination.js"></script>
+<script src="/js/selectModal/genericSelectModal.js"></script>
+<script src="/js/selectModal/queryInitializer.js"></script>
 <script src="/js/prodQuery.js"></script>

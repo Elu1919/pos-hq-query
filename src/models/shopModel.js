@@ -10,7 +10,7 @@ const shopData = {
         .query(`
           SELECT SHOP_ID, SHOP_NAME 
           FROM SHOP00
-          WHERE (SHOP_MEMO NOT IN ('支援系統不顯示') OR SHOP_MEMO IS NULL);
+          WHERE (SHOP_ID NOT IN ('A','TEST01') OR SHOP_MEMO IS NULL);
         `)
       return result.recordset
     } catch (err) {

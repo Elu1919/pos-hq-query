@@ -7,17 +7,17 @@
   <div class="modal-dialog modal-dialog-scrollable modal-xl">
     <div class="modal-content">
       <div class="modal-header bg-light">
-        <h5 class="modal-title fw-bold">請勾選欲列印貴賓</h5>
+        <h5 class="modal-title fw-bold">請勾選欲列印商品</h5>
         <button type="button"
                 class="btn-close"
                 data-bs-dismiss="modal"></button>
       </div>
 
       <div class="modal-body pt-0">
-        {{#if vips.length}}
+        {{#if prods.length}}
         <form method="POST"
-              action="/vip/vip-data/export/A4barcode"
-              id="vipExportA4-form">
+              action="/prod/prod-data/export/A4barcode"
+              id="prodExportA4-form">
           <!-- sticky 按鈕 -->
           <div style="position: sticky; top: 0; z-index: 1040; background: #f8f9fa; padding-bottom: 5px;">
             <div class="d-flex justify-content-between align-items-center mb-2 pt-2 px-2 gap-3">
@@ -54,16 +54,16 @@
                 <th class="col-4">貴賓名稱</th>
               </tr>
             </thead>
-            <tbody id="vip-raw-data-a4"
+            <tbody id="prod-raw-data-a4"
                    class="d-none">
-              {{#each vips}}
+              {{#each prods}}
               <tr>
-                <td>{{VIP_ID}}</td>
-                <td>{{NAME}}</td>
+                <td>{{PROD_ID}}</td>
+                <td>{{PROD_NAME1}}</td>
               </tr>
               {{/each}}
             </tbody>
-            <tbody id="vip-table-body-a4"></tbody>
+            <tbody id="prod-table-body-a4"></tbody>
           </table>
         </form>
         {{else}}
