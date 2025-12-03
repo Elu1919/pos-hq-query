@@ -1,0 +1,43 @@
+<!-- ✅ 頁面標題與提示按鈕 -->
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h2 class="mb-0">商品庫存</h2>
+</div>
+
+<!-- ✅ 固定頂部的控制列 -->
+<div class="bg-light sticky-top py-2"
+     style="top: 56px; z-index: 1030;">
+
+  <div class="alert alert-warning mt-3 w-75 mx-auto">如庫數量存顯示有問題，請先到POS總部後台進行「庫存重新計算」。　若還是無法解決，請聯繫系統負責人</div>
+
+  <table class="table table-striped table-hover align-middle table-bordered w-75 m-auto"
+         style="font-size: 15px;">
+    <thead class="table-dark"
+           style="position: sticky; top: 50px; z-index: 1020;">
+      <tr>
+        <th style="width: 140px;">商品編號</th>
+        <th style="width: 350px;">商品名稱</th>
+        {{#each shopList}}
+        <th class="text-center"
+            style="min-width: 80px;">{{SHOP_NAME}}</th>
+        {{/each}}
+      </tr>
+    </thead>
+
+    <tbody id="prod-table-container">
+      {{#each prodQuaList}}
+      <tr>
+        <td>{{PROD_ID}}</td>
+        <td>{{PROD_NAME1}}</td>
+
+        {{#each ../shopList}}
+        <td class="text-center"
+            style="min-width: 80px;">
+          {{lookup ../this SHOP_ID}}
+        </td>
+        {{/each}}
+      </tr>
+      {{/each}}
+    </tbody>
+
+  </table>

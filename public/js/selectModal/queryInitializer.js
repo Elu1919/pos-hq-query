@@ -35,8 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     listKeyName: 'PROD_ID',
     btnSelectAllId: 'btnSelectAllProdQua',
     btnUnselectAllId: 'btnUnselectAllProdQua',
-    addQty: false,
-    formId: 'prodQua-form'
+    addQty: false
   })
 
   // PROD 列表 - A4 (不需要數量)

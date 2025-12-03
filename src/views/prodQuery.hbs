@@ -47,8 +47,12 @@
         <p><span class="fs-6 badge bg-secondary">5</span> 編輯完畢後，按下按鈕［送出］，即可匯出 條碼貼</p>
         <p><span class="fs-6 badge bg-secondary">6</span> 按下送出後，需要等幾秒鐘讓報表生成，會在新分頁開啟</p>
         <hr>
-        <p><span class="fs-6 badge bg-warning text-dark">數量總覽</span></p>
-        <p><span class="fs-6 badge bg-secondary">1</span> 可觀看總部已開貴賓額度：「已使用」「未使用」和「總數量」</p>
+        <p><span class="fs-6 badge bg-warning text-dark">庫存查詢</span></p>
+        <p><span class="fs-6 badge bg-secondary">1</span> 先執行「查詢」</p>
+        <p><span class="fs-6 badge bg-secondary">2</span> 按下按鈕［匯出 A4條碼簿］，會將查詢結果帶入</p>
+        <p><span class="fs-6 badge bg-secondary">3</span> 可勾選欲列印的項目，預設「全選」，可透過按鈕「全部取消」</p>
+        <p><span class="fs-6 badge bg-secondary">4</span> 編輯完畢後，按下按鈕［送出］，即查詢勾選商品的庫存</p>
+        <p><span class="fs-6 badge bg-secondary">5</span> 按下送出後，會在新分頁開啟庫存頁</p>
         <hr>
         <p><span class="fs-6 badge bg-info text-dark">注意</span> 匯出一次只能勾選900筆資料，避免資料處理過久</p>
         <p><span class="fs-6 badge bg-info text-dark">注意</span> 安全設定關係，本系統只有在麻豆總部網域可以進行查詢</p>
@@ -57,7 +61,6 @@
   </div>
 </div>
 {{>prodQuaSearch}}
-{{>prodQua}}
 {{>prodExportA4}}
 {{>prodExportBarcode}}
 
@@ -207,7 +210,7 @@
                   class="btn btn-warning"
                   data-bs-toggle="modal"
                   data-bs-target="#prodQuantityModal">
-            查看庫存
+            庫存查詢
           </button>
         </div>
       </div>

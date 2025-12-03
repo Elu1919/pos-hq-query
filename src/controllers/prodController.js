@@ -46,15 +46,14 @@ const prodController = {
     }
   },
   showProdQuaDetails: async (req, res) => {
-    const { prodIdList } = req.body
-    const parsedList = Array.isArray(prodIdList) ? prodIdList : []
-    const prodIdsString = parsedList.map(v => v.PROD_ID).join(',')
+    let { id } = req.body
 
     try {
-      const shopList = await getShopList()
-      const { prodQuaList } = await prodData.getProdQua(prodIdsString)
+      const shopData = await getShopList()
+      const shopList = shopData[0]
+      const { prodQuaList } = await prodData.getProdQua(id)
 
-      return res.json({ prodQuaList, shopList })
+      return res.render('prodQua', { shopList, prodQuaList })
 
     } catch (err) {
       res.status(500).send('取得商品庫存明細失敗')

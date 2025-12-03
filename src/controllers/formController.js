@@ -5,7 +5,7 @@ const dayjs = require('dayjs')
 const path = require('path')
 const fs = require('fs')
 
-const { getSaleType, mergePhoneNumbers, chunkItems } = require('../utils/formUtils')
+const { mergePhoneNumbers, chunkItems } = require('../utils/formUtils')
 const pdfService = require('../services/pdfService')
 
 const saleData = require('../models/saleModel')
@@ -396,7 +396,7 @@ const formController = {
         let cursorY = pdfService.A4_PAGE_HEIGHT - pdfService.A4_MARGIN.top
 
         // 標頭
-        pdfService.drawA4Header(page, fontRegular, '產品條碼簿')
+        pdfService.drawA4Header(page, fontRegular, '商品條碼簿')
 
         // 標題列
         const headerYPos = pdfService.drawA4TitleRow(page, fontBold, ['名稱/編號/類別', '條碼'], cursorY)

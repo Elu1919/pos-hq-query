@@ -67,6 +67,8 @@ window.initGenericSelectModal = function (options) {
         const input = document.createElement('input')
         input.type = 'checkbox'
         input.classList.add('chk-item')
+        input.name = 'id'
+        input.value = item.idValue
         input.dataset[dataIdAttribute] = item.idValue
         input.checked = true
         tdCheck.appendChild(input)
