@@ -227,8 +227,8 @@ const formController = {
   },
 
   exportVipA4barcode: async (req, res) => {
-    const { vipList } = req.body
-    const parsedList = Array.isArray(vipList) ? vipList : []
+    const { vipIdList } = req.body
+    const parsedList = Array.isArray(vipIdList) ? vipIdList : []
     const vipIds = parsedList.map(v => v.VIP_ID)
 
     try {
@@ -491,8 +491,8 @@ const formController = {
   },
 
   exportVipBarcode: async (req, res) => {
-    const { vipList } = req.body
-    const parsedList = Array.isArray(vipList) ? vipList : []
+    const { vipIdList } = req.body
+    const parsedList = Array.isArray(vipIdList) ? vipIdList : []
     const vipIds = parsedList.map(v => v.VIP_ID)
 
     try {
