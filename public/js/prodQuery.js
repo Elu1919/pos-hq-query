@@ -2,6 +2,31 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  // ========================= 匯出數量限制 =========================
+
+  const form = document.getElementById('prodQua-form')
+  if (!form) return
+
+  form.addEventListener('submit', (e) => {
+    // 取得勾選的資料 ID (假設 checkbox name="id")
+    const checkboxes = form.querySelectorAll('input[name="id"]:checked')
+    const id = Array.from(checkboxes).map(cb => cb.value)
+
+    // 驗證是否至少勾選一筆
+    if (id.length === 0) {
+      e.preventDefault() // 阻止送出
+      alert('請至少勾選一筆資料再送出表單')
+      return
+    }
+
+    // 驗證是否超過 900 筆
+    if (id.length > 900) {
+      e.preventDefault() // 阻止送出
+      alert('最多一次輸出 900 筆資料')
+      return
+    }
+  })
+
   // ========================= 分頁列表 =========================
   const pageSize = 50
 
