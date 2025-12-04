@@ -163,19 +163,31 @@
                   }}>否</option>
         </select>
 
-        <span class="input-group-text">是否停用</span>
+        <span class="input-group-text">是否啟用</span>
         <select class="form-select"
-                style="max-width:90px;"
-                name="isusepos"
-                id="isusepos">
+                style="max-width:130px;"
+                name="ENABLE"
+                id="ENABLE">
           <option value="1"
                   {{select
-                  filterIn.isusepos "1"
+                  filterIn.ENABLE "1"
                   }}>啟用</option>
           <option value="0"
                   {{select
-                  filterIn.isusepos "0"
+                  filterIn.ENABLE "0"
                   }}>停用</option>
+          <option value="2"
+                  {{select
+                  filterIn.ENABLE "2"
+                  }}>POS可見</option>
+          <option value="3"
+                  {{select
+                  filterIn.ENABLE "3"
+                  }}>POS不可見</option> 
+          <option value="4"
+                  {{select
+                  filterIn.ENABLE "4"
+                  }}>全部</option>
         </select>
       </div>
 

@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['商品單位', v.UNIT_NAME],
         ['稅率', v.TAX],
         ['是否停用', v.isusepos ? '啟用' : '停用'],
+        ['POS可見', v.ENABLE ? '可見' : '不可見'],
         ['建立日期', v.DATE],
         ['最後更新', v.last_update]
       ].map(([label, value]) => `<tr><th style:"width: 30px;">${label}</th><td>${value || ''}</td></tr>`).join('')}
