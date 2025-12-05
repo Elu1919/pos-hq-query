@@ -36,7 +36,9 @@ const prodData = {
                      p00.isfloat,
                      p00.last_update,
                      p01.isusepos,
-                     p01.ENABLE 
+                     p01.ENABLE,
+                     p00.stock_type,
+                     p00.INV_TYPE
                  FROM PRODUCT00 p00
                  LEFT JOIN product01 p01
                      ON p00.PROD_ID = p01.PROD_ID
@@ -90,7 +92,9 @@ const prodData = {
                      p00.isfloat,
                      p00.last_update,
                      p01.isusepos,
-                     p01.ENABLE 
+                     p01.ENABLE,
+                     p00.stock_type,
+                     p00.INV_TYPE 
                  ORDER BY
                      p00.PROD_ID
                 `)

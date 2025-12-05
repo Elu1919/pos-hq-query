@@ -73,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ['機車行價', v.isfloat ? '浮動價' : v.PRICE_CRM],
         ['商品單位', v.UNIT_NAME],
         ['稅率', v.TAX],
+        ['庫存屬性', v.stock_type == 1 ? '扣自身' : v.stock_type == 0 ? '不扣除' : '扣配方'],
+        ['盤點類型', v.INV_TYPE == 0 ? '日盤' : v.INV_TYPE == 1 ? '週盤' : v.INV_TYPE == 2 ? '月盤' : '不盤'],
         ['是否停用', v.isusepos ? '啟用' : '停用'],
         ['POS可見', v.ENABLE ? '可見' : '不可見'],
         ['建立日期', v.DATE],

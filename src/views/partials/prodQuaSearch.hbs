@@ -5,6 +5,7 @@
     <tr>
       <td>{{PROD_ID}}</td>
       <td>{{PROD_NAME1}}</td>
+      <td>{{stock_type}}</td>
     </tr>
     {{/each}}
   </tbody>
@@ -47,6 +48,15 @@
                 <button type="button"
                         class="btn btn-sm btn-outline-danger"
                         id="btnUnselectAllProdQua">全部取消</button>
+                <div class="form-check form-switch mt-1">
+                  <input class="form-check-input"
+                         type="checkbox"
+                         role="switch"
+                         id="btnRemoveNotInv"
+                         checked>
+                  <label class="form-check-label"
+                         for="btnRemoveNotInv">排除不計庫存項目</label>
+                </div>
               </div>
               <button type="submit"
                       class="btn btn-sm btn-success">送出</button>

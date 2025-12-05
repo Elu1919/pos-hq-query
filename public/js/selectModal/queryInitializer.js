@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSelectAllId: 'btnSelectAllA4',
     btnUnselectAllId: 'btnUnselectAllA4',
     addQty: false,
+    enableStockFilter: false,
     formId: 'vipExportA4-form'
   })
 
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSelectAllId: 'btnSelectAllBarcode',
     btnUnselectAllId: 'btnUnselectAllBarcode',
     addQty: true,
+    enableStockFilter: false,
     formId: 'vipExportBarcode-form'
   })
 
@@ -35,7 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     listKeyName: 'PROD_ID',
     btnSelectAllId: 'btnSelectAllProdQua',
     btnUnselectAllId: 'btnUnselectAllProdQua',
-    addQty: false
+    addQty: false,
+    enableStockFilter: true
   })
 
   // PROD 列表 - A4 (不需要數量)
@@ -47,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSelectAllId: 'btnSelectAllA4',
     btnUnselectAllId: 'btnUnselectAllA4',
     addQty: false,
+    enableStockFilter: false,
     formId: 'prodExportA4-form'
   })
 
@@ -59,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSelectAllId: 'btnSelectAllBarcode',
     btnUnselectAllId: 'btnUnselectAllBarcode',
     addQty: true,
+    enableStockFilter: false,
     formId: 'prodExportBarcode-form'
   })
 
