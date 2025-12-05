@@ -95,6 +95,7 @@ const vipData = {
                           OR
                           (
                               v.VIP_ID LIKE 'CUST%'
+                              AND v.CARD IS NOT NULL 
                               AND (v.TELEPHONE IS NOT NULL OR v.MOBILE IS NOT NULL)
                           )
                       )
@@ -134,7 +135,11 @@ const vipData = {
             (
               (( VIP_ID LIKE 'CR%' OR VIP_ID LIKE 'B2B%' OR VIP_ID LIKE 'SALE%') AND VIP_ID <> NAME )
               OR
-              ( VIP_ID LIKE 'CUST%' AND (TELEPHONE IS NOT NULL OR MOBILE IS NOT NULL))
+              ( 
+                VIP_ID LIKE 'CUST%' 
+                AND CARD IS NOT NULL 
+                AND (TELEPHONE IS NOT NULL OR MOBILE IS NOT NULL)
+              )
             )
             AND VIP_ID NOT LIKE 'TEST%';
         `)
@@ -165,59 +170,68 @@ const vipData = {
       const result = await pool.request()
         .query(`
                 WITH GroupRule AS (
-                    SELECT 'CUST01' AS vipgrp_id, 'CARD' AS field_name, NULL AS empty_value
-                    UNION ALL
-                    SELECT 'CR0001', 'VIP_ID', NULL
-                    UNION ALL
-                    SELECT 'CRM001', 'VIP_ID', NULL
-                    UNION ALL
-                    SELECT 'B2B001', 'VIP_ID', NULL
-                    UNION ALL
-                    SELECT 'SALE01', 'VIP_ID', NULL
-                )
-                SELECT
-                    g.vipgrp_id,
-                    g.vipgrp_name,
-                    CASE
-                        WHEN g.vipgrp_id IN ('CR0001','CRM001') THEN SUBSTRING(v.VIP_ID, 3, 1)
-                        ELSE v.APPLY_SHOP
-                    END AS SHOP_ID,
-                    COUNT(*) AS total,
-                    SUM(
-                        CASE
-                            WHEN gr.vipgrp_id = 'CUST01' AND v.CARD IS NOT NULL THEN 1
-                            WHEN gr.vipgrp_id <> 'CUST01' AND v.VIP_ID <> v.NAME THEN 1
-                            ELSE 0
-                        END
-                    ) AS used,
-                    SUM(
-                        CASE
-                            WHEN gr.vipgrp_id = 'CUST01' AND v.CARD IS NULL THEN 1
-                            WHEN gr.vipgrp_id <> 'CUST01' AND v.VIP_ID = v.NAME THEN 1
-                            ELSE 0
-                        END
-                    ) AS remaining
-                FROM VIP00 v
-                INNER JOIN vip_group00 g
-                    ON v.vipgrp_id = g.vipgrp_id
-                INNER JOIN GroupRule gr
-                    ON v.vipgrp_id = gr.vipgrp_id
-                WHERE g.vipgrp_id IN ('CUST01','CR0001','CRM001','B2B001','SALE01')
-                GROUP BY g.vipgrp_id, g.vipgrp_name,
-                        CASE
-                            WHEN g.vipgrp_id IN ('CR0001','CRM001') THEN SUBSTRING(v.VIP_ID, 3, 1)
-                            ELSE v.APPLY_SHOP
-                        END
-                ORDER BY
-                    CASE g.vipgrp_id
-                        WHEN 'CUST01' THEN 1
-                        WHEN 'CR0001' THEN 2
-                        WHEN 'CRM001' THEN 3
-                        WHEN 'B2B001' THEN 4
-                        WHEN 'SALE01' THEN 5
-                        ELSE 99
-                    END,
-                    SHOP_ID;
+                  SELECT 'CUST01' AS vipgrp_id, 'CARD' AS field_name, NULL AS empty_value
+                  UNION ALL
+                  SELECT 'CR0001', 'VIP_ID', NULL
+                  UNION ALL
+                  SELECT 'CRM001', 'VIP_ID', NULL
+                  UNION ALL
+                  SELECT 'B2B001', 'VIP_ID', NULL
+                  UNION ALL
+                  SELECT 'SALE01', 'VIP_ID', NULL
+              )
+              SELECT
+                  g.vipgrp_id,
+                  g.vipgrp_name,
+                  CASE
+                      WHEN g.vipgrp_id IN ('CR0001','CRM001') THEN SUBSTRING(v.VIP_ID, 3, 1)
+                      ELSE v.APPLY_SHOP
+                  END AS SHOP_ID,
+                  COUNT(*) AS total,
+                  SUM(
+                      CASE
+                          -- *** 這是修改後的 CUST01 已使用（used）邏輯 ***
+                          WHEN gr.vipgrp_id = 'CUST01' 
+                              AND v.CARD IS NOT NULL 
+                              AND (v.TELEPHONE IS NOT NULL OR v.MOBILE IS NOT NULL) THEN 1
+                          -- 其他群組的已使用邏輯不變
+                          WHEN gr.vipgrp_id <> 'CUST01' AND v.VIP_ID <> v.NAME THEN 1
+                          ELSE 0
+                      END
+                  ) AS used,
+                  SUM(
+                      CASE
+                          -- CUST01 的空號（remaining）邏輯 (上次修改的版本)
+                          WHEN gr.vipgrp_id = 'CUST01' 
+                              AND v.CARD IS NULL 
+                              AND v.TELEPHONE IS NULL 
+                              AND v.MOBILE IS NULL THEN 1
+                          -- 其他群組的空號（remaining）邏輯不變
+                          WHEN gr.vipgrp_id <> 'CUST01' AND v.VIP_ID = v.NAME THEN 1
+                          ELSE 0
+                      END
+                  ) AS remaining
+              FROM VIP00 v
+              INNER JOIN vip_group00 g
+                  ON v.vipgrp_id = g.vipgrp_id
+              INNER JOIN GroupRule gr
+                  ON v.vipgrp_id = gr.vipgrp_id
+              WHERE g.vipgrp_id IN ('CUST01','CR0001','CRM001','B2B001','SALE01')
+              GROUP BY g.vipgrp_id, g.vipgrp_name,
+                  CASE
+                      WHEN g.vipgrp_id IN ('CR0001','CRM001') THEN SUBSTRING(v.VIP_ID, 3, 1)
+                      ELSE v.APPLY_SHOP
+                  END
+              ORDER BY
+                  CASE g.vipgrp_id
+                      WHEN 'CUST01' THEN 1
+                      WHEN 'CR0001' THEN 2
+                      WHEN 'CRM001' THEN 3
+                      WHEN 'B2B001' THEN 4
+                      WHEN 'SALE01' THEN 5
+                      ELSE 99
+                  END,
+                  SHOP_ID;
                `)
       return result.recordset
     } catch (err) {
