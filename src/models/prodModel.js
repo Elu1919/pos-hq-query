@@ -281,7 +281,9 @@ const prodData = {
       const pool = await poolPromise
       const result = await pool.request()
         .query(`
-          SELECT PROD_ID, PROD_NAME FROM prod_kind
+          SELECT PROD_ID, PROD_NAME
+          FROM prod_kind
+          WHERE stop_sale <> 1;
         `)
       return result.recordset
     } catch (err) {
