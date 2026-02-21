@@ -29,17 +29,12 @@ function filterToCheck(list, filterValue, keyField, checkName, filterOut) {
 
 async function getLists() {
   try {
-    const saleType = [
-      { TYPE_ID: '0', TYPE_NAME: '銷貨單' },
-      { TYPE_ID: '1', TYPE_NAME: '銷退單' },
-      { TYPE_ID: '2', TYPE_NAME: '被銷退單' }
-    ]
-
-    const [shop, vip, vipgrp, pay, prod, dep] = await Promise.all([
+    const [shop, vip, vipgrp, pay, saleType, prod, dep] = await Promise.all([
       shopData.getShopList(),
       vipData.getVipList(),
       vipData.getVipGrpList(),
       saleData.getPayList(),
+      saleData.getSaleTypeList(),
       prodData.getProdList(),
       prodData.getDepList(),
     ])
@@ -267,7 +262,21 @@ const saleData = {
       console.error('資料取得失敗：', err)
       throw err
     }
-  }
+  },
+
+  getSaleTypeList: async () => {
+    try {
+      const saleType = [
+        { TYPE_ID: '0', TYPE_NAME: '銷貨單' },
+        { TYPE_ID: '1', TYPE_NAME: '銷退單' },
+        { TYPE_ID: '2', TYPE_NAME: '被銷退單' }
+      ]
+      return saleType
+    } catch (err) {
+      console.error('資料取得失敗：', err)
+      throw err
+    }
+  },
 }
 
 module.exports = saleData
