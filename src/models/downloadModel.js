@@ -14,30 +14,30 @@ const downloadModel = {
           DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = '${filterIn.SHOP_ID || ''}'; 
           DECLARE @TYPE_STR        NVARCHAR(MAX) = '${filterIn.TYPE || ''}'; 
 
-          DECLARE @SALE_DATE_S DATETIME;
-          DECLARE @SALE_DATE_E DATETIME;
+          DECLARE @SALE_DATE_S DATETIME
+          DECLARE @SALE_DATE_E DATETIME
 
-          SET @SALE_DATE_S = CASE WHEN ISDATE(@SALE_DATE_S_STR) = 1 THEN CAST(@SALE_DATE_S_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END;
-          SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END;
+          -- 處理日期預設與轉換
+          SET @SALE_DATE_S = CASE WHEN ISDATE(@SALE_DATE_S_STR) = 1 THEN CAST(@SALE_DATE_S_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
+          SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
 
-          DECLARE @ShopXml XML, @TypeXml XML;
-          IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML);
-          IF ISNULL(@TYPE_STR, '') <> ''    SET @TypeXml = CAST('<root><v>' + REPLACE(@TYPE_STR, ',', '</v><v>') + '</v></root>' AS XML);
+          -- 處理多選 XML
+          DECLARE @ShopXml XML, @TypeXml XML
+          IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
+          IF ISNULL(@TYPE_STR, '') <> ''    SET @TypeXml = CAST('<root><v>' + REPLACE(@TYPE_STR, ',', '</v><v>') + '</v></root>' AS XML)
 
           SELECT 
+              CONVERT(VARCHAR(8), S1.order_time, 112) AS 訂貨日期,
+              S1.SALE_SNO AS 序號,
               CONVERT(VARCHAR(8), S1.order_time, 112) AS 銷貨日期,
-
               CASE 
                   WHEN V.iccardno IS NOT NULL AND V.iccardno <> '' THEN V.iccardno 
                   ELSE S1.SHOP_ID
               END AS [客戶/供應商編碼],
 
               '' AS [客戶/供應商名稱],
-
               '' AS 承辦人,
-
               S1.SHOP_ID AS 發貨倉庫,
-
               CASE S2.PAY_ID
                   WHEN '1'    THEN '15'
                   WHEN '4'    THEN '16'
@@ -50,13 +50,10 @@ const downloadModel = {
               END AS 交易類型,
 
               '' AS 貨幣,
-
               '' AS 匯率,
-
               CASE WHEN S1.FREE_MEMO = '寄賣/借出' THEN '寄賣' ELSE '' END AS 查詢關鍵字,
 
               E.EMP_NAME AS 服務人員,
-
               CASE S0.TYPE
                   WHEN '0' THEN '銷貨單'
                   WHEN '1' THEN '銷退單'
@@ -65,37 +62,24 @@ const downloadModel = {
               END AS 類型,
 
               S1.SALE_ID AS POS單號,
-
               COALESCE(
                   NULLIF(LTRIM(RTRIM(V.TELEPHONE)), ''), 
                   NULLIF(LTRIM(RTRIM(V.MOBILE)), ''), 
                   ''
               ) AS 貴賓電話,
 
-              S1.PROD_ID AS 品項編碼,
-
-              P.prod_shortname AS 品項名稱,
-
+              P.prod_shortname AS 品項編碼,
+              '' AS 品項名稱,
               '' AS 規格,
-
               S1.TASTE_MEMO AS 加值,
-
               S1.SALE_PRICE AS 單價,
-
               S1.QTY AS 數量,
-
               S1.ITEM_DISC AS 折讓,
-
-              (S1.SALE_PRICE * S1.QTY) - S1.ITEM_DISC AS 小計,
-
+              '' AS 小計,
               S1.FREE_MEMO AS 招待備註,
-
               S1.invo_no AS 發票號碼,
-
               S0.buyer_number AS 載具,
-
               S0.MEMO AS 備註,
-
               S0.RETURNED_ID AS 原銷貨單號
 
           FROM SALE01 S1
@@ -122,7 +106,8 @@ const downloadModel = {
 
           ORDER BY 
               S1.order_time DESC, 
-              S1.SALE_ID;
+              S1.SALE_ID, 
+              S1.SALE_SNO
               `)
 
       const saleData = result.recordset
