@@ -9,6 +9,8 @@ const saleDataModel = require('../models/saleModel')
 const shopData = require('../models/shopModel')
 const downloadData = require('../models/downloadModel')
 
+const { validateDateRange, exportToExcel } = require('../utils/formUtils')
+
 const posDataController = {
   showDataDownloadPage: async (req, res) => {
     try {
@@ -26,18 +28,13 @@ const posDataController = {
   downloadSaleDataToERP: async (req, res) => {
     try {
       const filterIn = { ...req.body }
-      const today = dayjs().format('YYYY-MM-DD')
 
-      filterIn.SALE_DATE_S = filterIn.SALE_DATE_S || today
-      filterIn.SALE_DATE_E = filterIn.SALE_DATE_E || today
-
-      if (filterIn.SALE_DATE_S > filterIn.SALE_DATE_E) {
-        return res.send(`
-          <script>
-            alert('起始日期不可小於結束日期');
-            window.history.back(); 
-          </script>
-        `);
+      const dateCheck = validateDateRange(filterIn.SALE_DATE_S, filterIn.SALE_DATE_E)
+      if (dateCheck.error) {
+        return res.send(`<script>
+                          alert("${dateCheck.error}")
+                          window.history.back()
+                        </script>`)
       }
 
       if (Array.isArray(filterIn.SHOP_ID)) {
@@ -59,32 +56,10 @@ const posDataController = {
         `);
       }
 
-      const workbook = new ExcelJS.Workbook()
-      const sheet = workbook.addWorksheet('銷售資料匯入檔')
+      const dateStr = dayjs().format('YYYYMMDD');
+      const fileName = `SaleData_ERP_${dateStr}.xlsx`;
 
-      const headers = Object.keys(saleData[0])
-      sheet.addRow(headers)
-      saleData.forEach(item => sheet.addRow(Object.values(item)))
-
-      const dateStr = dayjs().format('YYYYMMDD')
-      const fileName = `SaleData_ERP_${dateStr}.xlsx`
-
-      const tempDir = path.join(__dirname, '../../public/temp')
-      if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
-
-      const filePath = path.join(tempDir, fileName)
-
-      await workbook.xlsx.writeFile(filePath)
-
-      res.download(filePath, fileName, (err) => {
-        if (err) {
-          console.error('檔案下載失敗:', err)
-        }
-
-        fs.unlink(filePath, (unlinkErr) => {
-          if (unlinkErr) console.error('暫存檔刪除失敗:', unlinkErr)
-        })
-      })
+      await exportToExcel(res, saleData, fileName, '銷售資料匯入檔');
 
     } catch (err) {
       console.error('❌ POS資料導出失敗', err)

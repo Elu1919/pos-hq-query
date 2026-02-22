@@ -1,5 +1,10 @@
 // src/utils/formUtils.js
 
+const ExcelJS = require('exceljs')
+const path = require('path')
+const fs = require('fs')
+const dayjs = require('dayjs')
+
 /**
  * 根據單據類型代碼 (0, 1, 2, 3...) 轉換成中文名稱。
  * @param {number} typeCode - 單據類型代碼。
@@ -43,8 +48,51 @@ const chunkItems = (items, size) => {
   return chunks
 }
 
+/**
+ * 統一檢查日期範圍
+ */
+const validateDateRange = (dateS, dateE) => {
+  const today = dayjs().format('YYYY-MM-DD')
+  const start = dateS || today
+  const end = dateE || today
+
+  if (start > end) {
+    return { error: '起始日期不可大於結束日期', start, end }
+  }
+  return { error: null, start, end }
+}
+
+/**
+ * 通用 Excel 匯出模組
+ */
+const exportToExcel = async (res, data, fileName, sheetName = 'Sheet1') => {
+  const workbook = new ExcelJS.Workbook()
+  const sheet = workbook.addWorksheet(sheetName)
+
+  // 寫入標題與內容
+  const headers = Object.keys(data[0])
+  sheet.addRow(headers)
+  data.forEach(item => sheet.addRow(Object.values(item)))
+
+  // 檔案暫存與下載
+  const tempDir = path.join(__dirname, '../../public/temp')
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
+  const filePath = path.join(tempDir, fileName)
+
+  await workbook.xlsx.writeFile(filePath)
+
+  res.download(filePath, fileName, (err) => {
+    if (err) console.error('下載失敗:', err)
+    fs.unlink(filePath, (uErr) => {
+      if (uErr) console.error('刪除暫存失敗:', uErr)
+    })
+  })
+}
+
 module.exports = {
   getSaleType,
   mergePhoneNumbers,
   chunkItems,
+  validateDateRange,
+  exportToExcel,
 }
