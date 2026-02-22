@@ -5,7 +5,7 @@ const posDataController = require('../controllers/posDataController')
 
 const router = express.Router()
 
-// router.post('/vip-data/export/A4barcode', formController.exportVipA4barcode)
+router.post('/data/download/sale', posDataController.downloadSaleDataToERP)
 // router.post('/vip-data/export/barcode', formController.exportVipBarcode)
 // router.get('/vip-amount', vipController.showVipAmount)
 router.get('/data/download', posDataController.showDataDownloadPage)
