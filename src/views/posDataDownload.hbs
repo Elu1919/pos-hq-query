@@ -21,40 +21,109 @@
               <div class="modal-content">
                      <div class="modal-header">
                             <h5 class="modal-title fw-bold"
-                                id="hintLabel">操作提示</h5>
+                                id="hintLabel">操作提示 (點開按鈕看說明)</h5>
                             <button type="button"
                                     class="btn-close"
                                     data-bs-dismiss="modal"
                                     aria-label="關閉"></button>
                      </div>
                      <div class="modal-body">
-                            <p><span class="fs-6 badge bg-primary">查詢</span></p>
-                            <p><span class="fs-6 badge bg-secondary">1</span> 輸入查詢條件，無輸入資料為全選</p>
-                            <p><span class="fs-6 badge bg-secondary">2</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
+                            <p>
+                                   <button class="btn btn-success"
+                                           type="button"
+                                           data-bs-toggle="collapse"
+                                           data-bs-target="#ifo-sale"
+                                           aria-expanded="false"
+                                           aria-controls="ifo-sale">
+                                          銷售資料 (匯入ERP) ▼
+                                   </button>
+                            </p>
+                            <div class="collapse mb-3"
+                                 id="ifo-sale">
+                                   <div class="card card-body">
+                                          <p><span class="fs-6 badge bg-secondary">1</span> 請選擇 [日期範圍]，無輸入則只抓當天資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">2</span> 請選擇 [銷售門市]，無輸入則抓取全部門市資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">3</span> 請選擇 [單據類型]，無輸入則抓取全部單據資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">4</span> 選擇完畢後，按下按鈕［下載］，即可下載ERP匯入檔案
+                                          </p>
+                                   </div>
+                            </div>
+
+                            <p>
+                                   <button class="btn btn-success"
+                                           type="button"
+                                           data-bs-toggle="collapse"
+                                           data-bs-target="#ifo-transfer"
+                                           aria-expanded="false"
+                                           aria-controls="ifo-transfer">
+                                          調撥出庫、供應商進退貨 (匯入ERP) ▼
+                                   </button>
+                            </p>
+                            <div class="collapse mb-3"
+                                 id="ifo-transfer">
+                                   <div class="card card-body">
+                                          <p><span class="fs-6 badge bg-secondary">1</span> 請選擇 [日期範圍]，無輸入則只抓當天資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">2</span> 請選擇 [出庫門市]，無輸入則抓取全部門市資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">3</span> 請選擇 [資料表]，無輸入則抓取全部單據資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">4</span> 選擇完畢後，按下按鈕［下載］，即可下載ERP匯入檔案
+                                          </p>
+                                          <p class="text-danger fw-bold"><span
+                                                       class="fs-6 badge border border-danger text-danger">注意</span>
+                                                 調撥出庫，若調入門市為總部，將不會抓取到檔案內</p>
+                                          <p class="text-danger fw-bold"><span
+                                                       class="fs-6 badge border border-danger text-danger">注意</span>
+                                                 調撥出庫，若調入門市未使用[匯入]功能入庫，將不會抓取到檔案內</p>
+                                          <p class="text-danger fw-bold"><span
+                                                       class="fs-6 badge border border-danger text-danger">注意</span>
+                                                 可透過<span
+                                                       class="fs-6 badge bg-warning text-dark">問題單據</span>按鈕，查看以上沒有被抓取到檔案內的單據
+                                          </p>
+                                   </div>
+                            </div>
+
+                            <p>
+                                   <button class="btn btn-success"
+                                           type="button"
+                                           data-bs-toggle="collapse"
+                                           data-bs-target="#ifo-adjust"
+                                           aria-expanded="false"
+                                           aria-controls="ifo-adjust">
+                                          調整檔 (匯入ERP) ▼
+                                   </button>
+                            </p>
+                            <div class="collapse mb-3"
+                                 id="ifo-adjust">
+                                   <div class="card card-body">
+                                          <p><span class="fs-6 badge bg-secondary">1</span> 請選擇 [日期範圍]，無輸入則只抓當天資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">2</span> 請選擇 [調整門市]，無輸入則抓取全部門市資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">3</span> 選擇完畢後，按下按鈕［下載］，即可下載ERP匯入檔案
+                                          </p>
+                                   </div>
+                            </div>
+
+                            <p>
+                                   <button class="btn btn-success"
+                                           type="button"
+                                           data-bs-toggle="collapse"
+                                           data-bs-target="#ifo-material"
+                                           aria-expanded="false"
+                                           aria-controls="ifo-material">
+                                          領用檔 (匯入ERP) ▼
+                                   </button>
+                            </p>
+                            <div class="collapse mb-3"
+                                 id="ifo-material">
+                                   <div class="card card-body">
+                                          <p><span class="fs-6 badge bg-secondary">1</span> 請選擇 [日期範圍]，無輸入則只抓當天資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">2</span> 請選擇 [領用門市]，無輸入則抓取全部門市資料</p>
+                                          <p><span class="fs-6 badge bg-secondary">3</span> 選擇完畢後，按下按鈕［下載］，即可下載ERP匯入檔案
+                                          </p>
+                                   </div>
+                            </div>
+
+
                             <hr>
-                            <p><span class="fs-6 badge bg-success">匯出 A4條碼簿</span></p>
-                            <p><span class="fs-6 badge bg-secondary">1</span> 先執行「查詢」</p>
-                            <p><span class="fs-6 badge bg-secondary">2</span> 按下按鈕［匯出 A4條碼簿］，會將查詢結果帶入</p>
-                            <p><span class="fs-6 badge bg-secondary">3</span> 可勾選欲列印的項目，預設「全選」，可透過按鈕「全部取消」</p>
-                            <p><span class="fs-6 badge bg-secondary">4</span> 編輯完畢後，按下按鈕［送出］，即可匯出 A4條碼簿</p>
-                            <p><span class="fs-6 badge bg-secondary">5</span> 按下送出後，需要等幾秒鐘讓報表生成，會在新分頁開啟</p>
-                            <hr>
-                            <p><span class="fs-6 badge bg-success">匯出 標籤貼</span></p>
-                            <p><span class="fs-6 badge bg-secondary">1</span> 先執行「查詢」</p>
-                            <p><span class="fs-6 badge bg-secondary">2</span> 按下按鈕［匯出 標籤貼］，會將查詢結果帶入</p>
-                            <p><span class="fs-6 badge bg-secondary">3</span> 可勾選欲列印的項目，預設「全選」，可透過按鈕「全部取消」</p>
-                            <p><span class="fs-6 badge bg-secondary">4</span> 可微調標籤貼輸出數量（不可為0）</p>
-                            <p><span class="fs-6 badge bg-secondary">5</span> 編輯完畢後，按下按鈕［送出］，即可匯出 條碼貼</p>
-                            <p><span class="fs-6 badge bg-secondary">6</span> 按下送出後，需要等幾秒鐘讓報表生成，會在新分頁開啟</p>
-                            <hr>
-                            <p><span class="fs-6 badge bg-warning text-dark">庫存查詢</span></p>
-                            <p><span class="fs-6 badge bg-secondary">1</span> 先執行「查詢」</p>
-                            <p><span class="fs-6 badge bg-secondary">2</span> 按下按鈕［匯出 A4條碼簿］，會將查詢結果帶入</p>
-                            <p><span class="fs-6 badge bg-secondary">3</span> 可勾選欲列印的項目，預設「全選」，可透過按鈕「全部取消」</p>
-                            <p><span class="fs-6 badge bg-secondary">4</span> 編輯完畢後，按下按鈕［送出］，即查詢勾選商品的庫存</p>
-                            <p><span class="fs-6 badge bg-secondary">5</span> 按下送出後，會在新分頁開啟庫存頁</p>
-                            <hr>
-                            <p><span class="fs-6 badge bg-info text-dark">注意</span> 匯出一次只能勾選900筆資料，避免資料處理過久</p>
+                            <p><span class="fs-6 badge bg-info text-dark">注意</span> 建議最多抓取1年資料 (時間範圍越長、需更多時間彙整資料)</p>
                             <p><span class="fs-6 badge bg-info text-dark">注意</span> 安全設定關係，本系統只有在麻豆總部網域可以進行查詢</p>
                      </div>
               </div>
@@ -88,7 +157,7 @@
 <!-- 下載區 -->
 <!-- 銷售資料 -->
 <div class="card mb-4">
-       <h5 class="card-header bg-dark text-light fw-bold">銷售資料檔 (匯入ERP)</h5>
+       <h5 class="card-header bg-dark text-light fw-bold">銷售資料 (匯入ERP)</h5>
 
        <div class="card-body">
               <form action="/pos/data/download/sale"
@@ -102,14 +171,12 @@
                                    name="SALE_DATE_S"
                                    class="form-control"
                                    style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_S}}"
                                    aria-describedby="basic-addon1">
                             <p class="me-2 ms-2 pt-1"> ~ </p>
                             <input type="date"
                                    name="SALE_DATE_E"
                                    class="form-control"
                                    style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_E}}"
                                    aria-describedby="basic-addon1">
 
                             <span class="input-group-text fw-bold">銷售門市</span>
@@ -117,13 +184,12 @@
                             <input class="btn-check"
                                    type="checkbox"
                                    name="SHOP_ID"
-                                   id="{{this.SHOP_ID}}"
-                                   value="{{this.SHOP_ID}}"
-                                   {{#if
-                                   this.isCheck}}checked{{/if}}>
+                                   id="sale-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}">
                             <label class="btn btn-outline-secondary"
                                    style="width: 45px;"
-                                   for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
+                                   for="sale-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
                             {{/each}}
 
                             <span class="input-group-text fw-bold">單據類型</span>
@@ -132,9 +198,7 @@
                                    type="checkbox"
                                    name="TYPE"
                                    id="{{this.TYPE_ID}}"
-                                   value="{{this.TYPE_ID}}"
-                                   {{#if
-                                   this.isCheck}}checked{{/if}}>
+                                   value="{{this.TYPE_ID}}">
                             <label class="btn btn-outline-secondary"
                                    for="{{this.TYPE_ID}}"><span class="align-middle">{{this.TYPE_NAME}}</span></label>
                             {{/each}}
@@ -152,15 +216,15 @@
        </div>
 </div>
 
-<!-- 供應商進貨 -->
+<!-- 調撥出庫、供應商進貨、供應商退貨 -->
 <div class="card mb-4">
-       <h5 class="card-header bg-dark text-light fw-bold">供應商進貨檔 (匯入ERP)</h5>
+       <h5 class="card-header bg-dark text-light fw-bold">調撥出庫、供應商進退貨 (匯入ERP)</h5>
 
        <div class="card-body">
-              <form action="/pos/data/download/take-in"
+              <form action="/pos/data/download/transfer"
                     method="POST"
                     class="d-flex justify-content-between"
-                    id="take-in-form">
+                    id="transfer-form">
 
                      <div class="input-group mb-2">
                             <span class="input-group-text fw-bold">日期範圍</span>
@@ -168,120 +232,12 @@
                                    name="SALE_DATE_S"
                                    class="form-control"
                                    style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_S}}"
                                    aria-describedby="basic-addon1">
                             <p class="me-2 ms-2 pt-1"> ~ </p>
                             <input type="date"
                                    name="SALE_DATE_E"
                                    class="form-control"
                                    style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_E}}"
-                                   aria-describedby="basic-addon1">
-
-                            <span class="input-group-text fw-bold">進貨門市</span>
-                            {{#each shop}}
-                            <input class="btn-check"
-                                   type="checkbox"
-                                   name="SHOP_ID"
-                                   id="{{this.SHOP_ID}}"
-                                   value="{{this.SHOP_ID}}"
-                                   {{#if
-                                   this.isCheck}}checked{{/if}}>
-                            <label class="btn btn-outline-secondary"
-                                   style="width: 45px;"
-                                   for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
-                            {{/each}}
-
-                     </div>
-
-                     <button type="submit"
-                             form="take-in-form"
-                             class="btn btn-primary fw-bold"
-                             style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
-                               style="color: rgb(255, 255, 255);"></i></button>
-
-              </form>
-
-       </div>
-</div>
-
-<!-- 供應商退貨 -->
-<div class="card mb-4">
-       <h5 class="card-header bg-dark text-light fw-bold">供應商退貨檔 (匯入ERP)</h5>
-
-       <div class="card-body">
-              <form action="/pos/data/download/take-out"
-                    method="POST"
-                    class="d-flex justify-content-between"
-                    id="take-out-form">
-
-                     <div class="input-group mb-2">
-                            <span class="input-group-text fw-bold">日期範圍</span>
-                            <input type="date"
-                                   name="SALE_DATE_S"
-                                   class="form-control"
-                                   style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_S}}"
-                                   aria-describedby="basic-addon1">
-                            <p class="me-2 ms-2 pt-1"> ~ </p>
-                            <input type="date"
-                                   name="SALE_DATE_E"
-                                   class="form-control"
-                                   style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_E}}"
-                                   aria-describedby="basic-addon1">
-
-                            <span class="input-group-text fw-bold">退貨門市</span>
-                            {{#each shop}}
-                            <input class="btn-check"
-                                   type="checkbox"
-                                   name="SHOP_ID"
-                                   id="{{this.SHOP_ID}}"
-                                   value="{{this.SHOP_ID}}"
-                                   {{#if
-                                   this.isCheck}}checked{{/if}}>
-                            <label class="btn btn-outline-secondary"
-                                   style="width: 45px;"
-                                   for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
-                            {{/each}}
-
-                     </div>
-
-                     <button type="submit"
-                             form="take-out-form"
-                             class="btn btn-primary fw-bold"
-                             style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
-                               style="color: rgb(255, 255, 255);"></i></button>
-
-              </form>
-
-       </div>
-</div>
-
-<!-- 調撥出庫 -->
-<div class="card mb-4">
-       <h5 class="card-header bg-dark text-light fw-bold">調撥出庫檔 (匯入ERP)</h5>
-
-       <div class="card-body">
-              <form action="/pos/data/download/out"
-                    method="POST"
-                    class="d-flex justify-content-between"
-                    id="out-form">
-
-                     <div class="input-group mb-2">
-                            <span class="input-group-text fw-bold">日期範圍</span>
-                            <input type="date"
-                                   name="SALE_DATE_S"
-                                   class="form-control"
-                                   style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_S}}"
-                                   aria-describedby="basic-addon1">
-                            <p class="me-2 ms-2 pt-1"> ~ </p>
-                            <input type="date"
-                                   name="SALE_DATE_E"
-                                   class="form-control"
-                                   style="max-width:220px;"
-                                   value="{{filterIn.SALE_DATE_E}}"
                                    aria-describedby="basic-addon1">
 
                             <span class="input-group-text fw-bold">出庫門市</span>
@@ -289,24 +245,46 @@
                             <input class="btn-check"
                                    type="checkbox"
                                    name="SHOP_ID"
-                                   id="{{this.SHOP_ID}}"
-                                   value="{{this.SHOP_ID}}"
-                                   {{#if
-                                   this.isCheck}}checked{{/if}}>
+                                   id="transfer-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}">
                             <label class="btn btn-outline-secondary"
                                    style="width: 45px;"
-                                   for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
+                                   for="transfer-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
                             {{/each}}
+
+                            <span class="input-group-text fw-bold">資料表</span>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="OUT"
+                                   value="OUT">
+                            <label class="btn btn-outline-secondary"
+                                   for="OUT"><span class="align-middle">調撥出庫</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="TAKEIN"
+                                   value="TAKEIN">
+                            <label class="btn btn-outline-secondary"
+                                   for="TAKEIN"><span class="align-middle">供應商進貨</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="TAKEOUT"
+                                   value="TAKEOUT">
+                            <label class="btn btn-outline-secondary"
+                                   for="TAKEOUT"><span class="align-middle">供應商退貨</span></label>
 
                      </div>
 
                      <div class="d-flex">
                             <button id="inBtn"
                                     style="width: 100px;"
-                                    class="btn btn-warning me-2">入庫狀態</button>
+                                    class="btn btn-warning me-2">問題單據</button>
 
                             <button type="submit"
-                                    form="out-form"
+                                    form="transfer-form"
                                     class="btn btn-primary fw-bold"
                                     style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
                                       style="color: rgb(255, 255, 255);"></i></button>
@@ -350,13 +328,14 @@
                             <input class="btn-check"
                                    type="checkbox"
                                    name="SHOP_ID"
-                                   id="{{this.SHOP_ID}}"
+                                   id="adjust-{{this.SHOP_ID}}"
                                    value="{{this.SHOP_ID}}"
                                    {{#if
                                    this.isCheck}}checked{{/if}}>
                             <label class="btn btn-outline-secondary"
                                    style="width: 45px;"
-                                   for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
+                                   for="adjust-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
                             {{/each}}
 
                      </div>
@@ -403,13 +382,14 @@
                             <input class="btn-check"
                                    type="checkbox"
                                    name="SHOP_ID"
-                                   id="{{this.SHOP_ID}}"
+                                   id="material-{{this.SHOP_ID}}"
                                    value="{{this.SHOP_ID}}"
                                    {{#if
                                    this.isCheck}}checked{{/if}}>
                             <label class="btn btn-outline-secondary"
                                    style="width: 45px;"
-                                   for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
+                                   for="material-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
                             {{/each}}
 
                      </div>
