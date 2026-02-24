@@ -350,7 +350,88 @@ const downloadModel = {
             console.error('資料取得失敗：', err)
             throw err
         }
-    }
+    },
+    posMaterialToERP: async (filterIn) => {
+        try {
+            const pool = await poolPromise
+            const result = await pool.request()
+                .input('S_DATE_STR', filterIn.SALE_DATE_S)
+                .input('E_DATE_STR', filterIn.SALE_DATE_E)
+                .input('SHOP_IDS_STR', filterIn.SHOP_ID || '')
+                .query(`
+                    DECLARE @SALE_DATE_S_STR NVARCHAR(10) = @S_DATE_STR
+                    DECLARE @SALE_DATE_E_STR NVARCHAR(10) = @E_DATE_STR
+                    DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = @SHOP_IDS_STR 
+
+                    DECLARE @SALE_DATE_S DATETIME
+                    DECLARE @SALE_DATE_E DATETIME
+
+                    SET @SALE_DATE_S = CASE WHEN ISDATE(@SALE_DATE_S_STR) = 1 THEN CAST(@SALE_DATE_S_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
+                    SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
+
+                    DECLARE @ShopXml XML
+                    IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
+
+                    SELECT 
+                        日期,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY 日期, [客戶/供應商編碼], 發貨倉庫 
+                            ORDER BY POS單號 ASC, 原始序號 ASC
+                        ) AS 序號,
+                        [客戶/供應商編碼],
+                        [客戶/供應商名稱],
+                        發貨倉庫,
+                        POS單號,
+                        品項編碼,
+                        品項名稱,
+                        規格,
+                        數量,
+                        服務人員,
+                        領用原因,
+                        備註
+                    FROM (
+                        SELECT 
+                            CONVERT(VARCHAR(8), M0.INPUT_DATE, 112) AS 日期,
+                            M1.SHOP_ID AS [客戶/供應商編碼],
+                            '' AS [客戶/供應商名稱],
+                            M0.STK_ID AS 發貨倉庫,
+                            M1.MAT_ID AS POS單號,
+                            M1.MAT_SNO AS 原始序號,
+                            P.prod_shortname AS 品項編碼,
+                            '' AS 品項名稱,
+                            '' AS 規格,
+                            M1.QUANTITY AS 數量,
+                            E.EMP_NAME AS 服務人員,
+                            R.detail AS 領用原因,
+                            M0.MEMO AS 備註,
+                            M0.INPUT_DATE AS RAW_DATE,
+                            M1.SHOP_ID -- 用於外層過濾
+                        FROM MATERIAL01 M1
+                        INNER JOIN MATERIAL00 M0 ON M1.MAT_ID = M0.MAT_ID
+                        LEFT JOIN PRODUCT00 P ON M1.PROD_ID = P.PROD_ID
+                        LEFT JOIN EMPLOYEE E ON M0.USER_ID = E.EMP_ID
+                        LEFT JOIN matreason R ON M1.d_reason_id = R.d_reason_id
+                        WHERE 
+                            M0.STATUS = '2'
+                            AND M1.SHOP_ID NOT IN ('A', 'TEST01')
+                            AND M0.INPUT_DATE >= @SALE_DATE_S AND M0.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E)
+                            AND (
+                                ISNULL(@SHOP_ID_STR, '') = '' 
+                                OR M1.SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @ShopXml.nodes('/root/v') AS t(v))
+                            )
+                    ) AS BaseData
+                    ORDER BY 
+                        日期 DESC, 
+                        [客戶/供應商編碼] ASC, 
+                        發貨倉庫 ASC, 
+                        序號 ASC
+        `)
+            return result.recordset
+        } catch (err) {
+            console.error('資料取得失敗：', err)
+            throw err
+        }
+    },
 }
 
 module.exports = downloadModel

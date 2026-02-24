@@ -130,6 +130,47 @@ const posDataController = {
       res.status(500).send('資料取得失敗')
     }
   },
+  downloadMaterialData: async (req, res) => {
+    try {
+      const filterIn = { ...req.body }
+
+      const dateCheck = validateDateRange(filterIn.SALE_DATE_S, filterIn.SALE_DATE_E)
+      if (dateCheck.error) {
+        return res.send(`<script>
+                          alert("${dateCheck.error}")
+                          window.history.back()
+                        </script>`)
+      }
+
+      if (Array.isArray(filterIn.SHOP_ID)) {
+        filterIn.SHOP_ID = filterIn.SHOP_ID.join(',')
+      }
+
+      if (Array.isArray(filterIn.TYPE)) {
+        filterIn.TYPE = filterIn.TYPE.join(',')
+      }
+
+      const data = await downloadData.posMaterialToERP(filterIn)
+
+      if (!data || data.length === 0) {
+        return res.send(`
+          <script>
+            alert('此範圍內查無資料可供下載');
+            window.history.back(); 
+          </script>
+        `);
+      }
+
+      const dateStr = dayjs().format('YYYYMMDD');
+      const fileName = `MaterialData_ERP_${dateStr}.xlsx`;
+
+      await exportToExcel(res, data, fileName, 'ERP匯入檔');
+
+    } catch (err) {
+      console.error('❌ POS資料導出失敗', err)
+      res.status(500).send('導出失敗')
+    }
+  },
 }
 
 module.exports = posDataController
