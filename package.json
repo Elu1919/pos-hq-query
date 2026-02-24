@@ -44,6 +44,7 @@
     "express": "^5.1.0",
     "express-handlebars": "^8.0.3",
     "fontkit": "^2.0.4",
+    "mongoose": "^9.2.2",
     "mssql": "^11.0.1",
     "nodemon": "^3.1.10",
     "pdf-lib": "^1.17.1",
