@@ -1,13 +1,10 @@
 const express = require('express')
+
+const connectMongoDB = require('./src/config/mongodb')
+
 const path = require('path')
 const exphbs = require('express-handlebars')
 const hbsHelpers = require('./src/helpers/hbsHelpers')
-
-const saleRoutes = require('./src/routes/saleRoutes')
-const billRoutes = require('./src/routes/billRoutes')
-const vipRoutes = require('./src/routes/vipRoutes')
-const prodRoutes = require('./src/routes/prodRoutes')
-const posDataRoutes = require('./src/routes/posDataRoutes')
 
 // =====================
 // 取代 __dirname，支援 pkg 打包後路徑
@@ -15,6 +12,8 @@ const basePath = (typeof process.pkg !== 'undefined') ? path.dirname(process.exe
 // =====================
 
 const app = express()
+
+connectMongoDB()
 
 // JSON & form 解析
 app.use(express.json({ limit: '50mb' }))
@@ -36,11 +35,19 @@ app.set('view engine', 'hbs')
 app.set('views', path.join(basePath, 'src/views'))
 
 // 掛載路由
+const saleRoutes = require('./src/routes/saleRoutes')
+const billRoutes = require('./src/routes/billRoutes')
+const vipRoutes = require('./src/routes/vipRoutes')
+const prodRoutes = require('./src/routes/prodRoutes')
+const posDataRoutes = require('./src/routes/posDataRoutes')
+const stOrderRoutes = require('./src/routes/stOrderRoutes')
+
 app.use('/sale', saleRoutes)
 app.use('/bill', billRoutes)
 app.use('/vip', vipRoutes)
 app.use('/prod', prodRoutes)
 app.use('/pos', posDataRoutes)
+app.use('/st-order', stOrderRoutes)
 
 // 首頁導向商品查詢
 app.get('/', (req, res) => res.redirect('/sale/sale-data'))
