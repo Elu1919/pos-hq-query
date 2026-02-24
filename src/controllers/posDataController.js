@@ -56,7 +56,7 @@ const posDataController = {
       }
 
       const dateStr = dayjs().format('YYYYMMDD');
-      const fileName = `data_ERP_${dateStr}.xlsx`;
+      const fileName = `SaleData_ERP_${dateStr}.xlsx`;
 
       await exportToExcel(res, data, fileName, 'ERP匯入檔');
 
@@ -104,6 +104,30 @@ const posDataController = {
     } catch (err) {
       console.error('❌ POS資料導出失敗', err)
       res.status(500).send('導出失敗')
+    }
+  },
+  showNoTransferData: async (req, res) => {
+    try {
+      const filterIn = {
+        SALE_DATE_S: req.query.dateS,
+        SALE_DATE_E: req.query.dateE,
+        SHOP_ID: req.query.shops
+      }
+
+      const dateCheck = validateDateRange(filterIn.SALE_DATE_S, filterIn.SALE_DATE_E)
+      if (dateCheck.error) {
+        return res.send(`<script>
+                          alert("${dateCheck.error}")
+                          window.history.back()
+                        </script>`)
+      }
+
+      const data = await downloadData.posNoTransferToERP(filterIn)
+
+      res.json(data || [])
+
+    } catch (err) {
+      res.status(500).send('資料取得失敗')
     }
   },
 }
