@@ -101,16 +101,26 @@ const downloadModel = {
     posTransferToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
+
+            // 強化參數處理：確保傳入 SQL 的一定是字串，避免 EPARAM Invalid string 錯誤
+            const sDate = (filterIn.SALE_DATE_S || '').toString()
+            const eDate = (filterIn.SALE_DATE_E || '').toString()
+            const shopIds = (filterIn.SHOP_ID || '').toString()
+            // 若 TABLE 是陣列則轉為逗號字串
+            const tableIds = Array.isArray(filterIn.TABLE)
+                ? filterIn.TABLE.join(',')
+                : (filterIn.TABLE || '').toString()
+
             const result = await pool.request()
-                .input('S_DATE', filterIn.SALE_DATE_S || '')
-                .input('E_DATE', filterIn.SALE_DATE_E || '')
-                .input('SHOP_IDS', filterIn.SHOP_ID || '')
-                .input('TABLES', filterIn.TABLE || '')
+                .input('S_DATE_STR', sDate)
+                .input('E_DATE_STR', eDate)
+                .input('SHOP_IDS_STR', shopIds)
+                .input('TABLE_STR', tableIds)
                 .query(`
-          DECLARE @SALE_DATE_S_STR NVARCHAR(10) = @S_DATE
-          DECLARE @SALE_DATE_E_STR NVARCHAR(10) = @E_DATE
-          DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = @SHOP_IDS
-          DECLARE @TABLE_STR       NVARCHAR(MAX) = @TABLES
+          DECLARE @SALE_DATE_S_STR NVARCHAR(10) = @S_DATE_STR
+          DECLARE @SALE_DATE_E_STR NVARCHAR(10) = @E_DATE_STR
+          DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = @SHOP_IDS_STR
+          DECLARE @TABLE_IDS_STR   NVARCHAR(MAX) = @TABLE_STR
 
           DECLARE @SALE_DATE_S DATETIME
           DECLARE @SALE_DATE_E DATETIME
@@ -119,110 +129,106 @@ const downloadModel = {
           SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
 
           DECLARE @ShopXml XML, @TableXml XML
-          IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
-          IF ISNULL(@TABLE_STR, '')   <> '' SET @TableXml = CAST('<root><v>' + REPLACE(@TABLE_STR, ',', '</v><v>') + '</v></root>' AS XML)
+          IF ISNULL(@SHOP_ID_STR, '')   <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
+          IF ISNULL(@TABLE_IDS_STR, '') <> '' SET @TableXml = CAST('<root><v>' + REPLACE(@TABLE_IDS_STR, ',', '</v><v>') + '</v></root>' AS XML)
 
           SELECT 
               日期, 
               ROW_NUMBER() OVER (
-                  PARTITION BY 日期, 出貨倉庫, 收貨倉庫 
-                  ORDER BY RAW_DATE DESC, 倉庫調撥單號 ASC
+                  PARTITION BY 日期, 出貨倉庫, 收貨倉庫, POS單據類型
+                  ORDER BY RAW_DATE DESC, POS單號 ASC, 原始序號 ASC
               ) AS 序號,
-              承辦人, 出貨倉庫, 收貨倉庫, 專案, 借出客戶, 
-              倉庫調撥單號, 品項編碼, 品項名稱, 規格, 數量, 服務人員, 摘要, 產生生產入庫
+              承辦人, 出貨倉庫, 收貨倉庫, 專案, 借出客戶, 倉庫調撥單號, 
+              POS單據類型, POS單號, 品項編碼, 品項名稱, 規格, 數量, 服務人員, 備註, 產生生產入庫
           FROM (
-              -- A. 供應商進貨 (TAKEIN)
+              -- 1. 供應商進貨 (TAKEIN)
               SELECT 
-                  CONVERT(VARCHAR(8), T10.INPUT_DATE, 112) AS 日期,
-                  '' AS 承辦人,
-                  'A' AS 出貨倉庫,
-                  T10.STK_ID AS 收貨倉庫,
-                  '' AS 專案,
-                  '' AS 借出客戶,
-                  T11.TAKEIN_ID AS 倉庫調撥單號,
-                  P.prod_shortname AS 品項編碼,
-                  '' AS 品項名稱,
-                  '' AS 規格,
-                  T11.QUANTITY AS 數量,
-                  E.EMP_NAME AS 服務人員,
-                  T10.MEMO AS 摘要,
-                  '' AS 產生生產入庫,
-                  'TAKEIN' AS TABLE_TYPE,
-                  T10.STK_ID AS SHOP_ID,
-                  T10.INPUT_DATE AS RAW_DATE
+                  CONVERT(VARCHAR(8), T10.INPUT_DATE, 112) AS 日期, '' AS 承辦人, 'A' AS 出貨倉庫, T10.STK_ID AS 收貨倉庫,
+                  '' AS 專案, '' AS 借出客戶, '' AS 倉庫調撥單號, '供應商進貨' AS POS單據類型, T11.TAKEIN_ID AS POS單號,
+                  P.prod_shortname AS 品項編碼, '' AS 品項名稱, '' AS 規格, T11.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                  T10.MEMO AS 備註, '' AS 產生生產入庫, 'TAKEIN' AS TABLE_TYPE, T10.STK_ID AS SHOP_ID, 
+                  T10.INPUT_DATE AS RAW_DATE, T11.TAKEIN_SN AS 原始序號
               FROM TAKEIN11 T11
               INNER JOIN TAKEIN10 T10 ON T11.TAKEIN_ID = T10.TAKEIN_ID
               LEFT JOIN PRODUCT00 P ON T11.PROD_ID = P.PROD_ID
               LEFT JOIN EMPLOYEE E ON T10.USER_ID = E.EMP_ID
-              WHERE T10.STATUS = '2'
-                AND T10.STK_ID NOT IN ('A', 'TEST01')
+              WHERE T10.STATUS = '2' AND T10.SHOP_ID NOT IN ('A', 'TEST01')
 
               UNION ALL
 
-              -- B. 供應商退貨 (TAKEOUT)
+              -- 2. 供應商退貨 (TAKEOUT)
               SELECT 
-                  CONVERT(VARCHAR(8), T00.INPUT_DATE, 112) AS 日期,
-                  '' AS 承辦人,
-                  T00.STK_ID AS 出貨倉庫,
-                  'A' AS 收貨倉庫,
-                  '' AS 專案,
-                  '' AS 借出客戶,
-                  T01.TAKEOUT_ID AS 倉庫調撥單號,
-                  P.prod_shortname AS 品項編碼,
-                  '' AS 品項名稱,
-                  '' AS 規格,
-                  T01.QUANTITY AS 數量,
-                  E.EMP_NAME AS 服務人員,
-                  T00.MEMO AS 摘要,
-                  '' AS 產生生產入庫,
-                  'TAKEOUT' AS TABLE_TYPE,
-                  T00.STK_ID AS SHOP_ID,
-                  T00.INPUT_DATE AS RAW_DATE
+                  CONVERT(VARCHAR(8), T00.INPUT_DATE, 112) AS 日期, '' AS 承辦人, T00.STK_ID AS 出貨倉庫, 'A' AS 收貨倉庫,
+                  '' AS 專案, '' AS 借出客戶, '' AS 倉庫調撥單號, '供應商退貨' AS POS單據類型, T01.TAKEOUT_ID AS POS單號,
+                  P.prod_shortname AS 品項編碼, '' AS 品項名稱, '' AS 規格, T01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                  T00.MEMO AS 備註, '' AS 產生生產入庫, 'TAKEOUT' AS TABLE_TYPE, T00.SHOP_ID AS SHOP_ID, 
+                  T00.INPUT_DATE AS RAW_DATE, T01.TAKEOUT_SNO AS 原始序號
               FROM TAKEOUT01 T01
               INNER JOIN TAKEOUT00 T00 ON T01.TAKEOUT_ID = T00.TAKEOUT_ID
               LEFT JOIN PRODUCT00 P ON T01.PROD_ID = P.PROD_ID
               LEFT JOIN EMPLOYEE E ON T00.USER_ID = E.EMP_ID
-              WHERE T00.STATUS = '2'
-                AND T00.STK_ID NOT IN ('A', 'TEST01')
+              WHERE T00.STATUS = '2' AND T00.SHOP_ID NOT IN ('A', 'TEST01')
 
               UNION ALL
 
-              -- C. 調撥出庫 (OUT)
+              -- 3. 調撥出庫 (OUT)
               SELECT 
-                  CONVERT(VARCHAR(8), O00.INPUT_DATE, 112) AS 日期,
-                  '' AS 承辦人,
-                  O00.OUT_SHOP AS 出貨倉庫,
-                  O00.TO_SHOP AS 收貨倉庫,
-                  '' AS 專案,
-                  '' AS 借出客戶,
-                  O01.OUT_ID AS 倉庫調撥單號,
-                  P.prod_shortname AS 品項編碼,
-                  '' AS 品項名稱,
-                  '' AS 規格,
-                  O01.QUANTITY AS 數量,
-                  E.EMP_NAME AS 服務人員,
-                  O00.MEMO AS 摘要,
-                  '' AS 產生生產入庫,
-                  'OUT' AS TABLE_TYPE,
-                  O00.OUT_SHOP AS SHOP_ID,
-                  O00.INPUT_DATE AS RAW_DATE
+                  CONVERT(VARCHAR(8), O00.INPUT_DATE, 112) AS 日期, '' AS 承辦人, O00.OUT_SHOP AS 出貨倉庫, O00.TO_SHOP AS 收貨倉庫,
+                  '' AS 專案, '' AS 借出客戶, '' AS 倉庫調撥單號, '調撥' AS POS單據類型, O01.OUT_ID AS POS單號,
+                  P.prod_shortname AS 品項編碼, '' AS 品項名稱, '' AS 規格, O01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                  O00.MEMO AS 備註, '' AS 產生生產入庫, 'OUT' AS TABLE_TYPE, O00.SHOP_ID AS SHOP_ID, 
+                  O00.INPUT_DATE AS RAW_DATE, O01.OUT_SNO AS 原始序號
               FROM OUT01 O01
               INNER JOIN OUT00 O00 ON O01.OUT_ID = O00.OUT_ID
               LEFT JOIN PRODUCT00 P ON O01.PROD_ID = P.PROD_ID
               LEFT JOIN EMPLOYEE E ON O00.USER_ID = E.EMP_ID
-              WHERE O00.STATUS = '2'
-                AND O00.OUT_SHOP NOT IN ('A', 'TEST01')
+              WHERE O00.STATUS = '2' 
+                AND O00.SHOP_ID NOT IN ('A', 'TEST01')
+                AND O00.OUT_TYPE = '0' 
+                AND O00.EXPORTED = 'T'
                 AND O00.TO_SHOP NOT IN ('A', 'TEST01')
-                AND ISNULL(O00.EXPORTED, '') <> 'F'
+                AND O00.OUT_SHOP NOT IN ('A', 'TEST01')
+
+              UNION ALL
+
+              -- 4. 調撥入庫 (IN)
+              SELECT 
+                  CONVERT(VARCHAR(8), I00.INPUT_DATE, 112) AS 日期, '' AS 承辦人, 'A' AS 出貨倉庫, I00.IN_SHOP AS 收貨倉庫,
+                  '' AS 專案, '' AS 借出客戶, '' AS 倉庫調撥單號, '總部進貨' AS POS單據類型, I00.IN_ID AS POS單號,
+                  P.prod_shortname AS 品項編碼, '' AS 品項名稱, '' AS 規格, I01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                  I00.MEMO AS 備註, '' AS 產生生產入庫, 'IN' AS TABLE_TYPE, I00.SHOP_ID AS SHOP_ID, 
+                  I00.INPUT_DATE AS RAW_DATE, I01.IN_SNO AS 原始序號
+              FROM IN01 I01
+              INNER JOIN IN00 I00 ON I01.IN_ID = I00.IN_ID
+              LEFT JOIN PRODUCT00 P ON I01.PROD_ID = P.PROD_ID
+              LEFT JOIN EMPLOYEE E ON I00.USER_ID = E.EMP_ID
+              WHERE I00.STATUS = '2' 
+                AND I00.SHOP_ID NOT IN ('A', 'TEST01')
+                AND I00.IN_TYPE = '1'
+
+              UNION ALL
+
+              -- 5. 退回倉庫 (SEND_BACK)
+              SELECT 
+                  CONVERT(VARCHAR(8), SB0.INPUT_DATE, 112) AS 日期, '' AS 承辦人, SB0.STK_ID AS 出貨倉庫, SB0.STK_ID AS 收貨倉庫,
+                  '' AS 專案, '' AS 借出客戶, '' AS 倉庫調撥單號, '總部退貨' AS POS單據類型, SB0.SEND_BACK_ID AS POS單號,
+                  P.prod_shortname AS 品項編碼, '' AS 品項名稱, '' AS 規格, SB1.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                  SB0.MEMO AS 備註, '' AS 產生生產入庫, 'SEND_BACK' AS TABLE_TYPE, SB0.SHOP_ID AS SHOP_ID, 
+                  SB0.INPUT_DATE AS RAW_DATE, SB1.SEND_BACK_SNO AS 原始序號
+              FROM SEND_BACK01 SB1
+              INNER JOIN SEND_BACK00 SB0 ON SB1.SEND_BACK_ID = SB0.SEND_BACK_ID
+              LEFT JOIN PRODUCT00 P ON SB1.PROD_ID = P.PROD_ID
+              LEFT JOIN EMPLOYEE E ON SB0.USER_ID = E.EMP_ID
+              WHERE SB0.STATUS = '2' AND SB0.SHOP_ID NOT IN ('A', 'TEST01')
           ) AS CombinedData
           WHERE (RAW_DATE >= @SALE_DATE_S AND RAW_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
             AND (ISNULL(@SHOP_ID_STR, '') = '' OR SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @ShopXml.nodes('/root/v') AS t(v)))
-            AND (ISNULL(@TABLE_STR, '')   = '' OR TABLE_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @TableXml.nodes('/root/v') AS t(v)))
+            AND (ISNULL(@TABLE_IDS_STR, '') = '' OR TABLE_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @TableXml.nodes('/root/v') AS t(v)))
           ORDER BY 日期 DESC, 出貨倉庫 ASC, 收貨倉庫 ASC, 序號 ASC
         `)
             return result.recordset
         } catch (err) {
-            console.error('資料取得失敗：', err)
+            console.error('調撥資料取得失敗：', err)
             throw err
         }
     },
@@ -230,11 +236,10 @@ const downloadModel = {
         try {
             const pool = await poolPromise
             const result = await pool.request()
-                .input('S_DATE_STR', filterIn.SALE_DATE_S)
-                .input('E_DATE_STR', filterIn.SALE_DATE_E)
+                .input('S_DATE_STR', filterIn.SALE_DATE_S || '')
+                .input('E_DATE_STR', filterIn.SALE_DATE_E || '')
                 .input('SHOP_IDS_STR', filterIn.SHOP_ID || '')
                 .query(`
-          /* 1. 宣告與接收傳入參數 */
           DECLARE @SALE_DATE_S_STR NVARCHAR(10) = @S_DATE_STR
           DECLARE @SALE_DATE_E_STR NVARCHAR(10) = @E_DATE_STR
           DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = @SHOP_IDS_STR
@@ -242,15 +247,12 @@ const downloadModel = {
           DECLARE @SALE_DATE_S DATETIME
           DECLARE @SALE_DATE_E DATETIME
 
-          /* 2. 日期格式轉換與防錯 */
           SET @SALE_DATE_S = CASE WHEN ISDATE(@SALE_DATE_S_STR) = 1 THEN CAST(@SALE_DATE_S_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
           SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
 
-          /* 3. 處理門市多選過濾 (XML 解析) */
           DECLARE @ShopXml XML
           IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
 
-          /* 4. 主查詢開始 */
           SELECT 
               單據日期,
               建立門市,
@@ -290,9 +292,10 @@ const downloadModel = {
                   CASE WHEN O.EXPORT_ID IS NOT NULL AND O.EXPORT_ID <> '' THEN '調入單' ELSE '' END AS 匯入類型,
                   ISNULL(O.EXPORT_ID, '') AS 匯入單號,
                   O.INPUT_DATE AS RAW_DATE,
-                  O.SHOP_ID -- 用於外層 WHERE 門市多選過濾
+                  O.SHOP_ID
               FROM OUT00 O
               WHERE (O.INPUT_DATE >= @SALE_DATE_S AND O.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
+                AND O.OUT_TYPE = '0' -- 僅抓取調撥單
                 AND (
                     O.SHOP_ID IN ('A', 'TEST01') OR O.STATUS <> '2' 
                     OR O.TO_SHOP IN ('A', 'TEST01') OR O.EXPORTED = 'F'
@@ -327,10 +330,11 @@ const downloadModel = {
                   CASE WHEN O_MAP.OUT_ID IS NOT NULL THEN '調出單' ELSE '' END AS 匯入類型,
                   ISNULL(O_MAP.OUT_ID, '') AS 匯入單號,
                   I.INPUT_DATE AS RAW_DATE,
-                  I.SHOP_ID -- 用於外層 WHERE 門市多選過濾
+                  I.SHOP_ID
               FROM IN00 I
               LEFT JOIN OUT00 O_MAP ON I.IN_ID = O_MAP.EXPORT_ID
               WHERE (I.INPUT_DATE >= @SALE_DATE_S AND I.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
+                AND I.IN_TYPE = '0' -- 僅抓取調撥單
                 AND (
                     I.SHOP_ID IN ('A', 'TEST01') OR I.STATUS <> '2' 
                     OR I.OUT_SHOP IN ('A', 'TEST01') OR O_MAP.OUT_ID IS NULL
@@ -347,88 +351,127 @@ const downloadModel = {
         `)
             return result.recordset
         } catch (err) {
-            console.error('資料取得失敗：', err)
+            console.error('異常單據取得失敗：', err)
             throw err
         }
     },
-    posMaterialToERP: async (filterIn) => {
+    posNoTransferToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
+
+            // 參數防呆處理
+            const sDate = (filterIn.SALE_DATE_S || '').toString()
+            const eDate = (filterIn.SALE_DATE_E || '').toString()
+            const shopIds = (filterIn.SHOP_ID || '').toString()
+
             const result = await pool.request()
-                .input('S_DATE_STR', filterIn.SALE_DATE_S)
-                .input('E_DATE_STR', filterIn.SALE_DATE_E)
-                .input('SHOP_IDS_STR', filterIn.SHOP_ID || '')
+                .input('S_DATE_STR', sDate)
+                .input('E_DATE_STR', eDate)
+                .input('SHOP_IDS_STR', shopIds)
                 .query(`
-                    DECLARE @SALE_DATE_S_STR NVARCHAR(10) = @S_DATE_STR
-                    DECLARE @SALE_DATE_E_STR NVARCHAR(10) = @E_DATE_STR
-                    DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = @SHOP_IDS_STR 
+          DECLARE @SALE_DATE_S_STR NVARCHAR(10) = @S_DATE_STR
+          DECLARE @SALE_DATE_E_STR NVARCHAR(10) = @E_DATE_STR
+          DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = @SHOP_IDS_STR
 
-                    DECLARE @SALE_DATE_S DATETIME
-                    DECLARE @SALE_DATE_E DATETIME
+          DECLARE @SALE_DATE_S DATETIME
+          DECLARE @SALE_DATE_E DATETIME
 
-                    SET @SALE_DATE_S = CASE WHEN ISDATE(@SALE_DATE_S_STR) = 1 THEN CAST(@SALE_DATE_S_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
-                    SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
+          SET @SALE_DATE_S = CASE WHEN ISDATE(@SALE_DATE_S_STR) = 1 THEN CAST(@SALE_DATE_S_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
+          SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
 
-                    DECLARE @ShopXml XML
-                    IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
+          DECLARE @ShopXml XML
+          IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
 
-                    SELECT 
-                        日期,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY 日期, [客戶/供應商編碼], 發貨倉庫 
-                            ORDER BY POS單號 ASC, 原始序號 ASC
-                        ) AS 序號,
-                        [客戶/供應商編碼],
-                        [客戶/供應商名稱],
-                        發貨倉庫,
-                        POS單號,
-                        品項編碼,
-                        品項名稱,
-                        規格,
-                        數量,
-                        服務人員,
-                        領用原因,
-                        備註
-                    FROM (
-                        SELECT 
-                            CONVERT(VARCHAR(8), M0.INPUT_DATE, 112) AS 日期,
-                            M1.SHOP_ID AS [客戶/供應商編碼],
-                            '' AS [客戶/供應商名稱],
-                            M0.STK_ID AS 發貨倉庫,
-                            M1.MAT_ID AS POS單號,
-                            M1.MAT_SNO AS 原始序號,
-                            P.prod_shortname AS 品項編碼,
-                            '' AS 品項名稱,
-                            '' AS 規格,
-                            M1.QUANTITY AS 數量,
-                            E.EMP_NAME AS 服務人員,
-                            R.detail AS 領用原因,
-                            M0.MEMO AS 備註,
-                            M0.INPUT_DATE AS RAW_DATE,
-                            M1.SHOP_ID -- 用於外層過濾
-                        FROM MATERIAL01 M1
-                        INNER JOIN MATERIAL00 M0 ON M1.MAT_ID = M0.MAT_ID
-                        LEFT JOIN PRODUCT00 P ON M1.PROD_ID = P.PROD_ID
-                        LEFT JOIN EMPLOYEE E ON M0.USER_ID = E.EMP_ID
-                        LEFT JOIN matreason R ON M1.d_reason_id = R.d_reason_id
-                        WHERE 
-                            M0.STATUS = '2'
-                            AND M1.SHOP_ID NOT IN ('A', 'TEST01')
-                            AND M0.INPUT_DATE >= @SALE_DATE_S AND M0.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E)
-                            AND (
-                                ISNULL(@SHOP_ID_STR, '') = '' 
-                                OR M1.SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @ShopXml.nodes('/root/v') AS t(v))
-                            )
-                    ) AS BaseData
-                    ORDER BY 
-                        日期 DESC, 
-                        [客戶/供應商編碼] ASC, 
-                        發貨倉庫 ASC, 
-                        序號 ASC
+          SELECT 
+              單據日期, 建立門市, 單據類型, 單號, 調出門市, 
+              調入門市, 問題類型, 問題描述, 匯入類型, 匯入單號
+          FROM (
+              -- 1. 調出單 (OUT00)
+              SELECT 
+                  CONVERT(VARCHAR(19), O.INPUT_DATE, 120) AS 單據日期,
+                  O.SHOP_ID AS 建立門市,
+                  '調出單' AS 單據類型,
+                  O.OUT_ID AS 單號,
+                  O.OUT_SHOP AS 調出門市,
+                  O.TO_SHOP AS 調入門市,
+                  CASE 
+                      WHEN O.SHOP_ID = 'A' THEN '9901'
+                      WHEN O.SHOP_ID = 'TEST01' THEN '9902'
+                      WHEN O.STATUS <> '2' THEN '9801'
+                      WHEN O.TO_SHOP IN ('A', 'TEST01') THEN '0101'
+                      WHEN O.EXPORTED = 'F' THEN '0102'
+                      ELSE ''
+                  END AS 問題類型,
+                  CASE 
+                      WHEN O.SHOP_ID = 'A' THEN '總部key單、不納入表內'
+                      WHEN O.SHOP_ID = 'TEST01' THEN '測試店key單、不納入表內'
+                      WHEN O.STATUS <> '2' THEN '單據不是「核准」狀態'
+                      WHEN O.TO_SHOP IN ('A', 'TEST01') THEN '調入門市不可為 A 或 TEST01'
+                      WHEN O.EXPORTED = 'F' THEN '匯入門市，未使用[匯入]功能進行調撥入庫'
+                      ELSE ''
+                  END AS 問題描述,
+                  CASE WHEN ISNULL(O.EXPORT_ID, '') <> '' THEN '調入單' ELSE '' END AS 匯入類型,
+                  ISNULL(O.EXPORT_ID, '') AS 匯入單號,
+                  O.INPUT_DATE AS RAW_DATE,
+                  O.SHOP_ID AS RAW_SHOP
+              FROM OUT00 O
+              WHERE (O.INPUT_DATE >= @SALE_DATE_S AND O.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
+                AND O.OUT_TYPE = '0'
+                AND (
+                    O.SHOP_ID IN ('A', 'TEST01') OR O.STATUS <> '2' 
+                    OR O.TO_SHOP IN ('A', 'TEST01') OR O.EXPORTED = 'F'
+                )
+
+              UNION ALL
+
+              -- 2. 調入單 (IN00)
+              SELECT 
+                  CONVERT(VARCHAR(19), I.INPUT_DATE, 120) AS 單據日期,
+                  I.SHOP_ID AS 建立門市,
+                  '調入單' AS 單據類型,
+                  I.IN_ID AS 單號,
+                  I.OUT_SHOP AS 調出門市,
+                  I.IN_SHOP AS 調入門市,
+                  CASE 
+                      WHEN I.SHOP_ID = 'A' THEN '9901'
+                      WHEN I.SHOP_ID = 'TEST01' THEN '9902'
+                      WHEN I.STATUS <> '2' THEN '9801'
+                      WHEN I.OUT_SHOP IN ('A', 'TEST01') THEN '0201'
+                      WHEN O_MAP.OUT_ID IS NULL THEN '0202'
+                      ELSE ''
+                  END AS 問題類型,
+                  CASE 
+                      WHEN I.SHOP_ID = 'A' THEN '總部key單、不納入表內'
+                      WHEN I.SHOP_ID = 'TEST01' THEN '測試店key單、不納入表內'
+                      WHEN I.STATUS <> '2' THEN '單據不是「核准」狀態'
+                      WHEN I.OUT_SHOP IN ('A', 'TEST01') THEN '調出門市不可為 A 或 TEST01'
+                      WHEN O_MAP.OUT_ID IS NULL THEN '未使用[匯入]功能進行調撥入庫'
+                      ELSE ''
+                  END AS 問題描述,
+                  CASE WHEN O_MAP.OUT_ID IS NOT NULL THEN '調出單' ELSE '' END AS 匯入類型,
+                  ISNULL(O_MAP.OUT_ID, '') AS 匯入單號,
+                  I.INPUT_DATE AS RAW_DATE,
+                  I.SHOP_ID AS RAW_SHOP
+              FROM IN00 I
+              LEFT JOIN OUT00 O_MAP ON I.IN_ID = O_MAP.EXPORT_ID
+              WHERE (I.INPUT_DATE >= @SALE_DATE_S AND I.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
+                AND I.IN_TYPE = '0'
+                AND (
+                    I.SHOP_ID IN ('A', 'TEST01') OR I.STATUS <> '2' 
+                    OR I.OUT_SHOP IN ('A', 'TEST01') OR O_MAP.OUT_ID IS NULL
+                )
+          ) AS ResultTable
+          WHERE (ISNULL(@SHOP_ID_STR, '') = '' OR RAW_SHOP IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @ShopXml.nodes('/root/v') AS t(v)))
+          ORDER BY 
+              單據日期 DESC,
+              單據類型 ASC,
+              調出門市 ASC,
+              調入門市 ASC,
+              單號 ASC
         `)
             return result.recordset
         } catch (err) {
-            console.error('資料取得失敗：', err)
+            console.error('異常單據取得失敗：', err)
             throw err
         }
     },
