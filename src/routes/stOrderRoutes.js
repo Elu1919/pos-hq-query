@@ -3,7 +3,10 @@ const stOrderController = require('../controllers/stOrderController')
 
 const router = express.Router()
 
-router.get('/app-order', stOrderController.approvalOrdersPage)
-router.get('/app-order/:id', stOrderController.approvalDetailPage)
+router.get('/order-out/:id', stOrderController.showOrderOutDetailPage)
+router.get('/order/:id', stOrderController.showOrderDetailPage)
+router.get('/order', stOrderController.showOrdersPage)
+
+router.post('/order', stOrderController.searchOrdersData)
 
 module.exports = router

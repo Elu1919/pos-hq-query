@@ -11,6 +11,7 @@ const pdfService = require('../services/pdfService')
 const saleData = require('../models/saleModel')
 const vipData = require('../models/vipModel')
 const prodData = require('../models/prodModel')
+const stOrderData = require('../models/stOrderModel')
 
 const formController = {
   exportSalesData: async (req, res) => {
@@ -490,6 +491,245 @@ const formController = {
       res.status(500).send('資料取得失敗')
     }
   },
+
+  exportStOrderData: async (req, res) => {
+    try {
+      const id = req.body.ORDER_ID
+      if (!id) return res.status(400).send('缺少 ORDER_ID')
+
+      const order = await stOrderData.getOrderDetail(id)
+      if (!order) return res.status(404).send('找不到訂單資料')
+
+      const wb = new ExcelJS.Workbook()
+      const templatePath = path.join(__dirname, '../../public/form/補撥明細_範本.xlsx')
+
+      if (!fs.existsSync(templatePath)) {
+        return res.status(500).send('範本檔不存在: ' + templatePath)
+      }
+
+      await wb.xlsx.readFile(templatePath)
+      const ws = wb.getWorksheet(1)
+
+      // --- 設定分頁與高度參數 ---
+      const dataList = order.PROD_DATA || []
+      const tempTopRows = 3
+      const pageRows = 39
+      const pageSize = pageRows - tempTopRows
+      const totalPages = Math.ceil(dataList.length / pageSize) || 1
+      const rowHeightCm = 20.5
+
+      // --- 調整欄位寬度 ---
+      ws.getColumn(1).width = 10    // A: #
+      ws.getColumn(2).width = 25   // B: 商品類別 (再次增加)
+      ws.getColumn(3).width = 40   // C: 商品名稱
+      ws.getColumn(4).width = 8    // D: 數量
+      ws.getColumn(5).width = 8    // E: 單位 (再次縮小)
+      ws.getColumn(6).width = 17   // F: 備註
+
+      const borderStyle = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      }
+
+      function copyPageTemplate(ws, sourceStart, sourceEnd, targetStart) {
+        for (let r = sourceStart; r <= sourceEnd; r++) {
+          const sourceRow = ws.getRow(r)
+          const targetRow = ws.getRow(targetStart + (r - sourceStart))
+          targetRow.height = sourceRow.height
+          sourceRow.eachCell({ includeEmpty: true }, (sourceCell, colNumber) => {
+            const targetCell = targetRow.getCell(colNumber)
+            targetCell.value = sourceCell.value
+            targetCell.style = sourceCell.style
+          })
+        }
+      }
+
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const startRow = 1 + (pageIndex * pageRows)
+
+        if (pageIndex > 0) {
+          copyPageTemplate(ws, 1, tempTopRows, startRow)
+        }
+
+        // --- 填寫單頭 ---
+        ws.getCell(`B${startRow}`).value = order.SHOP_ID
+        ws.getCell(`D${startRow}`).value = order.INPUT_DATE
+        ws.getCell(`B${startRow + 1}`).value = order.USER
+        ws.getCell(`D${startRow + 1}`).value = order.ORDER_ID
+
+        // --- 填寫明細 ---
+        const startDataIndex = pageIndex * pageSize
+        const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
+
+        for (let i = startDataIndex; i < endDataIndex; i++) {
+          const rowInPage = i % pageSize
+          const rowNumber = startRow + tempTopRows + rowInPage
+          const item = dataList[i]
+          const currentRow = ws.getRow(rowNumber)
+
+          currentRow.height = rowHeightCm
+
+          const rowData = {
+            A: item.ORDER_SNO || (i + 1),
+            B: item.DEP,
+            C: item.PROD_NAME,
+            D: item.QUANTITY,
+            E: item.UNIT,
+            F: item.MEMO1
+          }
+
+          Object.keys(rowData).forEach(col => {
+            const cell = ws.getCell(`${col}${rowNumber}`)
+            cell.value = rowData[col]
+            cell.border = borderStyle
+
+            // 對齊：A(序號)、D(數量)、E(單位) 置中
+            let hAlign = 'left'
+            if (['A', 'D', 'E'].includes(col)) {
+              hAlign = 'center'
+            }
+
+            cell.alignment = {
+              vertical: 'middle',
+              horizontal: hAlign,
+              wrapText: true // 寬度變動大，統一開啟自動換行
+            }
+          })
+        }
+      }
+
+      ws.views = [] // 確保取消凍結視窗
+
+      const lastRow = totalPages * pageRows
+      ws.pageSetup.printArea = `A1:F${lastRow}`
+      ws.pageSetup.orientation = 'portrait'
+      ws.pageSetup.paperSize = 9
+
+      const fileName = `補撥明細_${order.SHOP_ID}_${dayjs().format('YYYYMMDD')}.xlsx`
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`)
+
+      await wb.xlsx.write(res)
+      res.end()
+
+    } catch (err) {
+      console.error('Excel 匯出失敗:', err)
+      if (!res.headersSent) res.status(500).send('匯出失敗')
+    }
+  },
+
+  exportStOrderOutData: async (req, res) => {
+    try {
+      const outId = req.body.OUT_ID
+      if (!outId) return res.status(400).send('缺少 OUT_ID')
+
+      const order = await stOrderData.getOrderOutDetail(outId)
+      if (!order) return res.status(404).send('找不到訂單資料')
+
+      const wb = new ExcelJS.Workbook()
+      const templatePath = path.join(__dirname, '../../public/form/出貨明細_範本.xlsx')
+      if (!fs.existsSync(templatePath)) return res.status(500).send('範本檔不存在')
+
+      await wb.xlsx.readFile(templatePath)
+      const ws = wb.getWorksheet(1)
+
+      // --- 設定分頁參數 ---
+      const dataList = order.PROD_DATA || []
+      const tempTopRows = 4    // 出貨單範本單頭佔 3 列，第 4 列是標題
+      const pageRows = 39
+      const pageSize = pageRows - tempTopRows
+      const totalPages = Math.ceil(dataList.length / pageSize) || 1
+      const rowHeightCm = 20.5
+
+      // --- 調整欄位寬度 (同步為要求寬度) ---
+      ws.getColumn(1).width = 10    // A: #
+      ws.getColumn(2).width = 25    // B: 商品類別
+      ws.getColumn(3).width = 40    // C: 商品名稱
+      ws.getColumn(4).width = 8     // D: 數量
+      ws.getColumn(5).width = 8     // E: 單位
+      ws.getColumn(6).width = 17    // F: 備註
+
+      const borderStyle = {
+        top: { style: 'thin' }, left: { style: 'thin' },
+        bottom: { style: 'thin' }, right: { style: 'thin' }
+      }
+
+      function copyPageTemplate(ws, sourceStart, sourceEnd, targetStart) {
+        for (let r = sourceStart; r <= sourceEnd; r++) {
+          const sourceRow = ws.getRow(r)
+          const targetRow = ws.getRow(targetStart + (r - sourceStart))
+          targetRow.height = sourceRow.height
+          sourceRow.eachCell({ includeEmpty: true }, (sourceCell, colNumber) => {
+            const targetCell = targetRow.getCell(colNumber)
+            targetCell.value = sourceCell.value
+            targetCell.style = sourceCell.style
+          })
+        }
+      }
+
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const startRow = 1 + (pageIndex * pageRows)
+        if (pageIndex > 0) copyPageTemplate(ws, 1, tempTopRows, startRow)
+
+        // --- 填寫出貨單單頭 (根據範本位置) ---
+        ws.getCell(`B${startRow}`).value = order.TO_SHOP      // 收貨門市
+        ws.getCell(`D${startRow}`).value = order.OUT_ID       // 出貨單號
+        ws.getCell(`B${startRow + 1}`).value = order.USER    // 負責人員
+        ws.getCell(`D${startRow + 1}`).value = order.INPUT_DATE // 建立日期
+        ws.getCell(`B${startRow + 2}`).value = order.APP_USER // 核准人員
+        ws.getCell(`D${startRow + 2}`).value = order.APP_DATE // 核准日期
+
+        // --- 填寫明細 ---
+        const startDataIndex = pageIndex * pageSize
+        const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
+
+        for (let i = startDataIndex; i < endDataIndex; i++) {
+          const rowInPage = i % pageSize
+          const rowNumber = startRow + tempTopRows + rowInPage
+          const item = dataList[i]
+
+          ws.getRow(rowNumber).height = rowHeightCm
+          const rowData = {
+            A: item.ORDER_SNO || (i + 1),
+            B: item.DEP,
+            C: item.PROD_NAME,
+            D: item.QUANTITY,
+            E: item.UNIT,
+            F: item.MEMO1
+          }
+
+          Object.keys(rowData).forEach(col => {
+            const cell = ws.getCell(`${col}${rowNumber}`)
+            cell.value = rowData[col]
+            cell.border = borderStyle
+            cell.alignment = {
+              vertical: 'middle',
+              horizontal: ['A', 'D', 'E'].includes(col) ? 'center' : 'left',
+              wrapText: true
+            }
+          })
+        }
+      }
+
+      ws.views = []
+      ws.pageSetup.printArea = `A1:F${totalPages * pageRows}`
+      ws.pageSetup.orientation = 'portrait'
+      ws.pageSetup.paperSize = 9
+
+      const fileName = `出貨明細_${order.TO_SHOP}_${dayjs().format('YYYYMMDD')}.xlsx`
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}"`)
+
+      await wb.xlsx.write(res)
+      res.end()
+
+    } catch (err) {
+      console.error('Excel 匯出失敗:', err)
+      if (!res.headersSent) res.status(500).send('匯出失敗')
+    }
+  }
 
 }
 

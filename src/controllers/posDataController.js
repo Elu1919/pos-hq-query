@@ -171,6 +171,31 @@ const posDataController = {
       res.status(500).send('導出失敗')
     }
   },
+  downloadStOrderOutToERP: async (req, res) => {
+    try {
+      const id = req.body.OUT_ID
+
+      const data = await downloadData.posStOrderOutToERP(id)
+
+      if (!data || data.length === 0) {
+        return res.send(`
+          <script>
+            alert('找不到單據');
+            window.history.back(); 
+          </script>
+        `);
+      }
+
+      const dateStr = dayjs().format('YYYYMMDD');
+      const fileName = `StOrderOutData_ERP_${dateStr}.xlsx`;
+
+      await exportToExcel(res, data, fileName, 'ERP匯入檔');
+
+    } catch (err) {
+      console.error('❌ POS資料導出失敗', err)
+      res.status(500).send('導出失敗')
+    }
+  },
 }
 
 module.exports = posDataController
