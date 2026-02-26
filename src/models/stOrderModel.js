@@ -51,7 +51,7 @@ const orderData = {
           LEFT JOIN EMPLOYEE E ON O.USER_ID = E.EMP_ID
           WHERE O.STATUS = '2'
             AND O.EXPORTED IN ('F', 'O')
-            -- AND O.SHOP_ID NOT IN ('A', 'TEST01')
+            AND O.SHOP_ID NOT IN ('A', 'TEST01')
             AND (O.INPUT_DATE >= @SALE_DATE_S AND O.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
             AND (
                 ISNULL(@SHOP_ID_STR, '') = '' 
