@@ -103,7 +103,6 @@ const formController = {
       res.status(500).send('資料取得失敗')
     }
   },
-
   exportBillById: async (req, res) => {
     const { id } = req.params
     const { bills } = req.body
@@ -226,7 +225,6 @@ const formController = {
     await wb.xlsx.write(res)
     res.end()
   },
-
   exportVipA4barcode: async (req, res) => {
     const { vipIdList } = req.body
     const parsedList = Array.isArray(vipIdList) ? vipIdList : []
@@ -304,7 +302,6 @@ const formController = {
       res.status(500).send('資料取得失敗')
     }
   },
-
   exportVipBarcode: async (req, res) => {
     const { vipIdList } = req.body
     const parsedList = Array.isArray(vipIdList) ? vipIdList : []
@@ -353,7 +350,6 @@ const formController = {
       res.status(500).send('資料取得失敗')
     }
   },
-
   exportProdA4barcode: async (req, res) => {
     const { prodIdList } = req.body
     const parsedList = Array.isArray(prodIdList) ? prodIdList : []
@@ -439,7 +435,6 @@ const formController = {
       res.status(500).send('資料取得失敗')
     }
   },
-
   exportProdBarcode: async (req, res) => {
     const { prodIdList } = req.body
     const parsedList = Array.isArray(prodIdList) ? prodIdList : []
@@ -491,8 +486,55 @@ const formController = {
       res.status(500).send('資料取得失敗')
     }
   },
-
   exportStOrderData: async (req, res) => {
+    // === 1. 檔案與基礎配置變數 ===
+    const TEMPLATE_FILENAME = '補撥明細_範本.xlsx'
+    const HEADER_ROWS = 3            // 單頭(2列) + 標題(1列)
+    const PAGE_TOTAL_ROWS = 29       // 每 29 列換頁 (固定格式)
+    const ROW_HEIGHT = 21           // 資料列高
+    const UNIT_CONVERSION = 5.5      // 公分轉 Excel 欄寬係數
+
+    // === 2. 欄寬配置 (單位：公分) ===
+    const COL_WIDTH_CM = [
+      { col: 1, cm: 4.2 },  // A: 類別
+      { col: 2, cm: 7.5 },  // B: 名稱
+      { col: 3, cm: 1.3 },  // C: 數量
+      { col: 4, cm: 1.1 },  // D: 單位
+      { col: 5, cm: 0.2 },  // E: 間距 (窄)
+      { col: 6, cm: 4.2 },  // F: 類別
+      { col: 7, cm: 7.5 },  // G: 名稱
+      { col: 8, cm: 1.3 },  // H: 數量
+      { col: 9, cm: 1.1 }   // I: 單位
+    ]
+
+    // === 3. 版面設定變數 ===
+    const PAGE_SETUP = {
+      orientation: 'landscape',      // 橫式
+      paperSize: 9,                  // A4
+      margins: {
+        left: 0.2, right: 0.2,
+        top: 0.5, bottom: 0,
+        header: 0.18, footer: 0
+      },
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0
+    }
+
+    // === 4. 頁首頁尾設定 ===
+    const HEADER_FOOTER = {
+      oddHeader: '&C&16&"微軟正黑體,粗體"補撥明細表', // 置中標題
+      oddFooter: '&R第 &P 頁，共 &N 頁'               // 右下角頁碼
+    }
+
+    const BORDER_STYLE = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    }
+    // ==========================================
+
     try {
       const id = req.body.ORDER_ID
       if (!id) return res.status(400).send('缺少 ORDER_ID')
@@ -501,7 +543,7 @@ const formController = {
       if (!order) return res.status(404).send('找不到訂單資料')
 
       const wb = new ExcelJS.Workbook()
-      const templatePath = path.join(__dirname, '../../public/form/補撥明細_範本.xlsx')
+      const templatePath = path.join(__dirname, '../../public/form/', TEMPLATE_FILENAME)
 
       if (!fs.existsSync(templatePath)) {
         return res.status(500).send('範本檔不存在: ' + templatePath)
@@ -510,30 +552,23 @@ const formController = {
       await wb.xlsx.readFile(templatePath)
       const ws = wb.getWorksheet(1)
 
-      // --- 設定分頁與高度參數 ---
-      const dataList = order.PROD_DATA || []
-      const tempTopRows = 3
-      const pageRows = 27
-      const pageSize = pageRows - tempTopRows
-      const totalPages = Math.ceil(dataList.length / pageSize) || 1
-      const rowHeightCm = 30
+      // 套用欄寬
+      COL_WIDTH_CM.forEach(item => {
+        ws.getColumn(item.col).width = item.cm * UNIT_CONVERSION
+      })
 
-      // --- 調整欄位寬度 ---
-      ws.getColumn(1).width = 10    // A: #
-      ws.getColumn(2).width = 25   // B: 商品類別 (再次增加)
-      ws.getColumn(3).width = 40   // C: 商品名稱
-      ws.getColumn(4).width = 8    // D: 數量
-      ws.getColumn(5).width = 8    // E: 單位 (再次縮小)
-      ws.getColumn(6).width = 17   // F: 備註
-
-      const borderStyle = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
+      // 套用版面設定
+      ws.pageSetup = {
+        ...PAGE_SETUP,
+        headerFooter: HEADER_FOOTER
       }
 
-      function copyPageTemplate(ws, sourceStart, sourceEnd, targetStart) {
+      const dataList = order.PROD_DATA || []
+      const dataRowsPerPage = PAGE_TOTAL_ROWS - HEADER_ROWS
+      const pageSize = dataRowsPerPage * 2
+      const totalPages = Math.ceil(dataList.length / pageSize) || 1
+
+      const copyPageTemplate = (ws, sourceStart, sourceEnd, targetStart) => {
         for (let r = sourceStart; r <= sourceEnd; r++) {
           const sourceRow = ws.getRow(r)
           const targetRow = ws.getRow(targetStart + (r - sourceStart))
@@ -547,65 +582,61 @@ const formController = {
       }
 
       for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
-        const startRow = 1 + (pageIndex * pageRows)
+        const startRow = 1 + (pageIndex * PAGE_TOTAL_ROWS)
 
         if (pageIndex > 0) {
-          copyPageTemplate(ws, 1, tempTopRows, startRow)
+          copyPageTemplate(ws, 1, HEADER_ROWS, startRow)
         }
 
-        // --- 填寫單頭 ---
+        // 填寫單頭
         ws.getCell(`B${startRow}`).value = order.SHOP_ID
-        ws.getCell(`D${startRow}`).value = order.INPUT_DATE
+        ws.getCell(`G${startRow}`).value = order.INPUT_DATE
         ws.getCell(`B${startRow + 1}`).value = order.USER
-        ws.getCell(`D${startRow + 1}`).value = order.ORDER_ID
+        ws.getCell(`G${startRow + 1}`).value = order.ORDER_ID
 
-        // --- 填寫明細 ---
         const startDataIndex = pageIndex * pageSize
         const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
 
         for (let i = startDataIndex; i < endDataIndex; i++) {
-          const rowInPage = i % pageSize
-          const rowNumber = startRow + tempTopRows + rowInPage
           const item = dataList[i]
-          const currentRow = ws.getRow(rowNumber)
+          const relativeIndex = i - startDataIndex
+          const isLeft = relativeIndex < dataRowsPerPage
+          const rowInPage = isLeft ? relativeIndex : relativeIndex - dataRowsPerPage
+          const rowNumber = startRow + HEADER_ROWS + rowInPage
 
-          currentRow.height = rowHeightCm
+          const colMap = isLeft
+            ? { dep: 'A', name: 'B', qty: 'C', unit: 'D' }
+            : { dep: 'F', name: 'G', qty: 'H', unit: 'I' }
 
-          const rowData = {
-            A: item.ORDER_SNO || (i + 1),
-            B: item.DEP,
-            C: item.PROD_NAME,
-            D: item.QUANTITY,
-            E: item.UNIT,
-            F: item.MEMO1
-          }
+          ws.getCell(`${colMap.dep}${rowNumber}`).value = item.DEP
+          ws.getCell(`${colMap.name}${rowNumber}`).value = item.PROD_NAME
+          ws.getCell(`${colMap.qty}${rowNumber}`).value = item.QUANTITY
+          ws.getCell(`${colMap.unit}${rowNumber}`).value = item.UNIT
 
-          Object.keys(rowData).forEach(col => {
+          Object.entries(colMap).forEach(([key, col]) => {
             const cell = ws.getCell(`${col}${rowNumber}`)
-            cell.value = rowData[col]
-            cell.border = borderStyle
+            cell.border = BORDER_STYLE
 
-            // 對齊：A(序號)、D(數量)、E(單位) 置中
-            let hAlign = 'left'
-            if (['A', 'D', 'E'].includes(col)) {
-              hAlign = 'center'
-            }
+            // 修正對齊邏輯：類別(dep) 與 名稱(name) 皆置左，其餘置中
+            const isAlignLeft = key === 'dep' || key === 'name'
 
             cell.alignment = {
               vertical: 'middle',
-              horizontal: hAlign,
-              wrapText: true // 寬度變動大，統一開啟自動換行
+              horizontal: isAlignLeft ? 'left' : 'center',
+              wrapText: true
             }
           })
+
+          ws.getRow(rowNumber).height = ROW_HEIGHT
+        }
+
+        if (pageIndex < totalPages - 1) {
+          ws.getRow(startRow + PAGE_TOTAL_ROWS - 1).addPageBreak()
         }
       }
 
-      ws.views = [] // 確保取消凍結視窗
-
-      const lastRow = totalPages * pageRows
-      ws.pageSetup.printArea = `A1:F${lastRow}`
-      ws.pageSetup.orientation = 'portrait'
-      ws.pageSetup.paperSize = 9
+      ws.pageSetup.printArea = `A1:I${totalPages * PAGE_TOTAL_ROWS}`
+      ws.views = []
 
       const fileName = `補撥明細_${order.SHOP_ID}_${dayjs().format('YYYYMMDD')}.xlsx`
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -619,8 +650,55 @@ const formController = {
       if (!res.headersSent) res.status(500).send('匯出失敗')
     }
   },
-
   exportStOrderOutData: async (req, res) => {
+    // === 1. 檔案與基礎配置變數 ===
+    const TEMPLATE_FILENAME = '出貨明細_範本.xlsx'
+    const HEADER_ROWS = 4            // 單頭(3列) + 標題(1列)
+    const PAGE_TOTAL_ROWS = 29       // 每 27 列換頁
+    const ROW_HEIGHT = 21           // 資料列高
+    const UNIT_CONVERSION = 5.5      // 公分轉 Excel 欄寬係數
+
+    // === 2. 欄寬配置 (單位：公分) ===
+    const COL_WIDTH_CM = [
+      { col: 1, cm: 4.2 },  // A: 商品類別
+      { col: 2, cm: 7.5 },  // B: 商品名稱
+      { col: 3, cm: 1.3 },  // C: 數量
+      { col: 4, cm: 1.1 },  // D: 單位
+      { col: 5, cm: 0.2 },  // E: 間距 (窄)
+      { col: 6, cm: 4.2 },  // F: 商品類別
+      { col: 7, cm: 7.5 },  // G: 商品名稱
+      { col: 8, cm: 1.3 },  // H: 數量
+      { col: 9, cm: 1.1 }   // I: 單位
+    ]
+
+    // === 3. 版面設定變數 ===
+    const PAGE_SETUP = {
+      orientation: 'landscape',      // 橫式
+      paperSize: 9,                  // A4
+      margins: {
+        left: 0.2, right: 0.2,
+        top: 0.5, bottom: 0,
+        header: 0.18, footer: 0
+      },
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0
+    }
+
+    // === 4. 頁首頁尾設定 ===
+    const HEADER_FOOTER = {
+      oddHeader: '&C&16&"微軟正黑體,粗體"出貨明細表',
+      oddFooter: '&R第 &P 頁，共 &N 頁'
+    }
+
+    const BORDER_STYLE = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    }
+    // ==========================================
+
     try {
       const outId = req.body.OUT_ID
       if (!outId) return res.status(400).send('缺少 OUT_ID')
@@ -629,34 +707,32 @@ const formController = {
       if (!order) return res.status(404).send('找不到訂單資料')
 
       const wb = new ExcelJS.Workbook()
-      const templatePath = path.join(__dirname, '../../public/form/出貨明細_範本.xlsx')
-      if (!fs.existsSync(templatePath)) return res.status(500).send('範本檔不存在')
+      const templatePath = path.join(__dirname, '../../public/form/', TEMPLATE_FILENAME)
+
+      if (!fs.existsSync(templatePath)) {
+        return res.status(500).send('範本檔不存在: ' + templatePath)
+      }
 
       await wb.xlsx.readFile(templatePath)
       const ws = wb.getWorksheet(1)
 
-      // --- 設定分頁參數 ---
-      const dataList = order.PROD_DATA || []
-      const tempTopRows = 4    // 出貨單範本單頭佔 3 列，第 4 列是標題
-      const pageRows = 27
-      const pageSize = pageRows - tempTopRows
-      const totalPages = Math.ceil(dataList.length / pageSize) || 1
-      const rowHeightCm = 30
+      // 套用欄寬
+      COL_WIDTH_CM.forEach(item => {
+        ws.getColumn(item.col).width = item.cm * UNIT_CONVERSION
+      })
 
-      // --- 調整欄位寬度 (同步為要求寬度) ---
-      ws.getColumn(1).width = 10    // A: #
-      ws.getColumn(2).width = 25    // B: 商品類別
-      ws.getColumn(3).width = 40    // C: 商品名稱
-      ws.getColumn(4).width = 8     // D: 數量
-      ws.getColumn(5).width = 8     // E: 單位
-      ws.getColumn(6).width = 17    // F: 備註
-
-      const borderStyle = {
-        top: { style: 'thin' }, left: { style: 'thin' },
-        bottom: { style: 'thin' }, right: { style: 'thin' }
+      // 套用版面與頁首頁尾
+      ws.pageSetup = {
+        ...PAGE_SETUP,
+        headerFooter: HEADER_FOOTER
       }
 
-      function copyPageTemplate(ws, sourceStart, sourceEnd, targetStart) {
+      const dataList = order.PROD_DATA || []
+      const dataRowsPerPage = PAGE_TOTAL_ROWS - HEADER_ROWS
+      const pageSize = dataRowsPerPage * 2 // 左右對開
+      const totalPages = Math.ceil(dataList.length / pageSize) || 1
+
+      const copyPageTemplate = (ws, sourceStart, sourceEnd, targetStart) => {
         for (let r = sourceStart; r <= sourceEnd; r++) {
           const sourceRow = ws.getRow(r)
           const targetRow = ws.getRow(targetStart + (r - sourceStart))
@@ -670,53 +746,62 @@ const formController = {
       }
 
       for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
-        const startRow = 1 + (pageIndex * pageRows)
-        if (pageIndex > 0) copyPageTemplate(ws, 1, tempTopRows, startRow)
+        const startRow = 1 + (pageIndex * PAGE_TOTAL_ROWS)
 
-        // --- 填寫出貨單單頭 (根據範本位置) ---
-        ws.getCell(`B${startRow}`).value = order.TO_SHOP      // 收貨門市
-        ws.getCell(`D${startRow}`).value = order.OUT_ID       // 出貨單號
-        ws.getCell(`B${startRow + 1}`).value = order.USER    // 負責人員
-        ws.getCell(`D${startRow + 1}`).value = order.INPUT_DATE // 建立日期
-        ws.getCell(`B${startRow + 2}`).value = order.APP_USER // 核准人員
-        ws.getCell(`D${startRow + 2}`).value = order.APP_DATE // 核准日期
+        if (pageIndex > 0) {
+          copyPageTemplate(ws, 1, HEADER_ROWS, startRow)
+        }
 
-        // --- 填寫明細 ---
+        // --- 填寫單頭 (對應出貨範本 CSV 座標) ---
+        ws.getCell(`B${startRow}`).value = order.TO_SHOP        // 收貨門市
+        ws.getCell(`G${startRow}`).value = order.OUT_ID         // 出貨單號
+        ws.getCell(`B${startRow + 1}`).value = order.USER      // 負責人員
+        ws.getCell(`G${startRow + 1}`).value = order.INPUT_DATE // 建立日期
+        ws.getCell(`B${startRow + 2}`).value = order.APP_USER  // 核准人員
+        ws.getCell(`G${startRow + 2}`).value = order.APP_DATE  // 核准日期
+
         const startDataIndex = pageIndex * pageSize
         const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
 
         for (let i = startDataIndex; i < endDataIndex; i++) {
-          const rowInPage = i % pageSize
-          const rowNumber = startRow + tempTopRows + rowInPage
           const item = dataList[i]
+          const relativeIndex = i - startDataIndex
+          const isLeft = relativeIndex < dataRowsPerPage
+          const rowInPage = isLeft ? relativeIndex : relativeIndex - dataRowsPerPage
+          const rowNumber = startRow + HEADER_ROWS + rowInPage
 
-          ws.getRow(rowNumber).height = rowHeightCm
-          const rowData = {
-            A: item.ORDER_SNO || (i + 1),
-            B: item.DEP,
-            C: item.PROD_NAME,
-            D: item.QUANTITY,
-            E: item.UNIT,
-            F: item.MEMO1
-          }
+          const colMap = isLeft
+            ? { dep: 'A', name: 'B', qty: 'C', unit: 'D' }
+            : { dep: 'F', name: 'G', qty: 'H', unit: 'I' }
 
-          Object.keys(rowData).forEach(col => {
+          ws.getCell(`${colMap.dep}${rowNumber}`).value = item.DEP
+          ws.getCell(`${colMap.name}${rowNumber}`).value = item.PROD_NAME
+          ws.getCell(`${colMap.qty}${rowNumber}`).value = item.QUANTITY
+          ws.getCell(`${colMap.unit}${rowNumber}`).value = item.UNIT
+
+          Object.entries(colMap).forEach(([key, col]) => {
             const cell = ws.getCell(`${col}${rowNumber}`)
-            cell.value = rowData[col]
-            cell.border = borderStyle
+            cell.border = BORDER_STYLE
+
+            // 內容對齊：類別與名稱置左，其餘置中
+            const isAlignLeft = key === 'dep' || key === 'name'
             cell.alignment = {
               vertical: 'middle',
-              horizontal: ['A', 'D', 'E'].includes(col) ? 'center' : 'left',
+              horizontal: isAlignLeft ? 'left' : 'center',
               wrapText: true
             }
           })
+
+          ws.getRow(rowNumber).height = ROW_HEIGHT
+        }
+
+        if (pageIndex < totalPages - 1) {
+          ws.getRow(startRow + PAGE_TOTAL_ROWS - 1).addPageBreak()
         }
       }
 
+      ws.pageSetup.printArea = `A1:I${totalPages * PAGE_TOTAL_ROWS}`
       ws.views = []
-      ws.pageSetup.printArea = `A1:F${totalPages * pageRows}`
-      ws.pageSetup.orientation = 'portrait'
-      ws.pageSetup.paperSize = 9
 
       const fileName = `出貨明細_${order.TO_SHOP}_${dayjs().format('YYYYMMDD')}.xlsx`
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
