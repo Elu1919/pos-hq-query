@@ -513,10 +513,10 @@ const formController = {
       // --- 設定分頁與高度參數 ---
       const dataList = order.PROD_DATA || []
       const tempTopRows = 3
-      const pageRows = 39
+      const pageRows = 27
       const pageSize = pageRows - tempTopRows
       const totalPages = Math.ceil(dataList.length / pageSize) || 1
-      const rowHeightCm = 20.5
+      const rowHeightCm = 30
 
       // --- 調整欄位寬度 ---
       ws.getColumn(1).width = 10    // A: #
@@ -638,10 +638,10 @@ const formController = {
       // --- 設定分頁參數 ---
       const dataList = order.PROD_DATA || []
       const tempTopRows = 4    // 出貨單範本單頭佔 3 列，第 4 列是標題
-      const pageRows = 39
+      const pageRows = 27
       const pageSize = pageRows - tempTopRows
       const totalPages = Math.ceil(dataList.length / pageSize) || 1
-      const rowHeightCm = 20.5
+      const rowHeightCm = 30
 
       // --- 調整欄位寬度 (同步為要求寬度) ---
       ws.getColumn(1).width = 10    // A: #
