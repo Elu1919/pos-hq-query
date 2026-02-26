@@ -12,8 +12,20 @@
       </ul>
       <ul>
         <li><strong>出貨單號：</strong>{{order.OUT_ID}}</li>
-        <li><strong>核准人員：</strong>{{order.APP_USER}}</li>
-        <li><strong>核准日期：</strong>{{order.APP_DATE}}</li>
+        <li><strong>核准人員：</strong>
+          {{#if order.APP_USER}}
+          <strong>{{order.APP_USER}}</strong>
+          {{else}}
+          <span class="text-secondary">單據未核准</span>
+          {{/if}}
+        </li>
+        <li><strong>核准日期：</strong>
+          {{#if order.APP_DATE}}
+          <strong>{{order.APP_DATE}}</strong>
+          {{else}}
+          <span class="text-secondary">單據未核准</span>
+          {{/if}}
+        </li>
       </ul>
       <ul>
         <li><strong>出貨倉庫：</strong>{{order.SHOP_ID}}</li>
