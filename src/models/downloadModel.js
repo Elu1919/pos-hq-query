@@ -22,102 +22,142 @@ const downloadModel = {
                 .input('SHOP_IDS_VAL', shopIds)
                 .input('TYPE_VAL', types)
                 .query(`
-          DECLARE @SALE_DATE_S_STR NVARCHAR(10) = @S_DATE_VAL
-          DECLARE @SALE_DATE_E_STR NVARCHAR(10) = @E_DATE_VAL
-          DECLARE @SHOP_ID_STR     NVARCHAR(MAX) = @SHOP_IDS_VAL
-          DECLARE @TYPE_STR        NVARCHAR(MAX) = @TYPE_VAL
+                        DECLARE @START_DATE NVARCHAR(10) = @S_DATE_VAL
+                        DECLARE @END_DATE NVARCHAR(10) = @E_DATE_VAL
+                        DECLARE @SHOP_IDS     NVARCHAR(MAX) = @SHOP_IDS_VAL
+                        DECLARE @DOC_TYPES        NVARCHAR(MAX) = @TYPE_VAL
 
-          DECLARE @SALE_DATE_S DATETIME
-          DECLARE @SALE_DATE_E DATETIME
+                        /* 1. 日期預設值處理 (當天) */
+                        DECLARE @S_DATE DATETIME = CASE WHEN ISDATE(@START_DATE) = 1 THEN CAST(@START_DATE AS DATE) ELSE CAST(GETDATE() AS DATE) END
+                        DECLARE @E_DATE DATETIME = CASE WHEN ISDATE(@END_DATE) = 1 THEN CAST(@END_DATE AS DATE) ELSE CAST(GETDATE() AS DATE) END
 
-          SET @SALE_DATE_S = CASE WHEN ISDATE(@SALE_DATE_S_STR) = 1 THEN CAST(@SALE_DATE_S_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
-          SET @SALE_DATE_E = CASE WHEN ISDATE(@SALE_DATE_E_STR) = 1 THEN CAST(@SALE_DATE_E_STR AS DATE) ELSE CAST(GETDATE() AS DATE) END
+                        /* 2. 多選字串拆解處理 (XML 方式) */
+                        DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(@SHOP_IDS, ',', '</v><v>') + '</v></r>' AS XML)
+                        DECLARE @TypeXml XML = CAST('<r><v>' + REPLACE(@DOC_TYPES, ',', '</v><v>') + '</v></r>' AS XML)
 
-          DECLARE @ShopXml XML, @TypeXml XML
-          IF ISNULL(@SHOP_ID_STR, '') <> '' SET @ShopXml = CAST('<root><v>' + REPLACE(@SHOP_ID_STR, ',', '</v><v>') + '</v></root>' AS XML)
-          IF ISNULL(@TYPE_STR, '')    <> '' SET @TypeXml = CAST('<root><v>' + REPLACE(@TYPE_STR, ',', '</v><v>') + '</v></root>' AS XML)
-
-          SELECT 
-              訂貨日期,
-              ROW_NUMBER() OVER (
-                  PARTITION BY 訂貨日期, [客戶/供應商編碼], 發貨倉庫, 交易類型
-                  ORDER BY RAW_TIME DESC, POS單號 ASC, 原始序號 ASC
-              ) AS 序號,
-              銷貨日期, [客戶/供應商編碼], [客戶/供應商名稱], 承辦人, 發貨倉庫, 
-              交易類型, 貨幣, 匯率, 查詢關鍵字, 服務人員, 類型, POS單號, 
-              貴賓電話, 品項編碼, 品項名稱, 規格, 加值, 單價, 數量, 折讓, 
-              小計, 招待備註, 發票號碼, 載具, 備註, 原銷貨單號
-          FROM (
-              SELECT 
-                  CONVERT(VARCHAR(8), S1.order_time, 112) AS 訂貨日期,
-                  CONVERT(VARCHAR(8), S1.order_time, 112) AS 銷貨日期,
-                  ISNULL(NULLIF(V.iccardno, ''), S1.SHOP_ID) AS [客戶/供應商編碼],
-                  '' AS [客戶/供應商名稱],
-                  '' AS 承辦人,
-                  S1.SHOP_ID AS 發貨倉庫,
-                  CASE S2.PAY_ID
-                      WHEN '1'    THEN '15'
-                      WHEN '4'    THEN '16'
-                      WHEN '5'    THEN '16'
-                      WHEN 'H'    THEN '17'
-                      WHEN 'OP13' THEN '18'
-                      WHEN 'Z'    THEN '19'
-                      WHEN 'Z1'   THEN '1A'
-                      ELSE ISNULL(S2.PAY_ID, '')
-                  END AS 交易類型,
-                  '' AS 貨幣,
-                  '' AS 匯率,
-                  CASE WHEN S1.FREE_MEMO = '寄賣/借出' THEN '寄賣' ELSE '' END AS 查詢關鍵字,
-                  E.EMP_NAME AS 服務人員,
-                  CASE S0.TYPE
-                      WHEN '0' THEN '銷貨單'
-                      WHEN '1' THEN '銷退單'
-                      WHEN '2' THEN '被銷退單'
-                      ELSE S0.TYPE
-                  END AS 類型,
-                  S1.SALE_ID AS POS單號,
-                  S1.SALE_SNO AS 原始序號,
-                  COALESCE(
-                      NULLIF(LTRIM(RTRIM(V.TELEPHONE)), ''), 
-                      NULLIF(LTRIM(RTRIM(V.MOBILE)), ''), 
-                      ''
-                  ) AS 貴賓電話,
-                  P.prod_shortname AS 品項編碼,
-                  '' AS 品項名稱,
-                  '' AS 規格,
-                  S1.TASTE_MEMO AS 加值,
-                  S1.SALE_PRICE AS 單價,
-                  S1.QTY AS 數量,
-                  S1.ITEM_DISC AS 折讓,
-                  (S1.SALE_PRICE * S1.QTY) + S1.ITEM_DISC AS 小計,
-                  S1.FREE_MEMO AS 招待備註,
-                  S1.invo_no AS 發票號碼,
-                  S0.buyer_number AS 載具,
-                  CASE 
-                      WHEN ISNULL(S0.MEMO,'') <> '' AND ISNULL(S0.spec_memo,'') <> '' 
-                          THEN S0.MEMO + CHAR(13) + CHAR(10) + S0.spec_memo
-                      ELSE ISNULL(NULLIF(S0.MEMO, ''), ISNULL(S0.spec_memo, ''))
-                  END AS 備註,
-                  S0.RETURNED_ID AS 原銷貨單號,
-                  S1.order_time AS RAW_TIME,
-                  S1.SHOP_ID AS RAW_SHOP,
-                  S0.TYPE AS RAW_TYPE
-              FROM SALE01 S1
-              INNER JOIN SALE00 S0 ON S1.SHOP_ID = S0.SHOP_ID AND S1.SALE_ID = S0.SALE_ID
-              LEFT JOIN VIP00 V ON S0.VIP_ID = V.VIP_ID
-              OUTER APPLY (
-                  SELECT TOP 1 PAY_ID FROM SALE02 
-                  WHERE SHOP_ID = S1.SHOP_ID AND SALE_ID = S1.SALE_ID
-              ) S2
-              LEFT JOIN EMPLOYEE E ON S0.SALE_USER = E.EMP_ID
-              LEFT JOIN PRODUCT00 P ON S1.PROD_ID = P.PROD_ID
-              WHERE S0.STATUS = '2'
-                AND S1.SHOP_ID NOT IN ('A', 'TEST01')
-          ) AS BaseData
-          WHERE (RAW_TIME >= @SALE_DATE_S AND RAW_TIME < DATEADD(DAY, 1, @SALE_DATE_E))
-            AND (ISNULL(@SHOP_ID_STR, '') = '' OR RAW_SHOP IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @ShopXml.nodes('/root/v') AS t(v)))
-            AND (ISNULL(@TYPE_STR, '') = '' OR RAW_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @TypeXml.nodes('/root/v') AS t(v)))
-          ORDER BY 訂貨日期 DESC, [客戶/供應商編碼] ASC, 發貨倉庫 ASC, 交易類型 ASC, 序號 ASC
+                        /* 3. 主查詢邏輯 */
+                        SELECT 
+                            訂貨日期,
+                            -- 序號編排：依照 訂貨日期、客戶編碼、發貨倉庫、交易類型 為單位分組
+                            ROW_NUMBER() OVER (
+                                PARTITION BY 訂貨日期, [客戶/供應商編碼], 發貨倉庫, 交易類型 
+                                ORDER BY RAW_TIME ASC, POS單號 ASC, 原始序號 ASC
+                            ) AS 序號,
+                            銷貨日期,
+                            [客戶/供應商編碼],
+                            '' AS [客戶/供應商名稱],
+                            '' AS 承辦人,
+                            發貨倉庫,
+                            交易類型,
+                            '' AS 貨幣,
+                            '' AS 匯率,
+                            查詢關鍵字,
+                            服務人員,
+                            類型,
+                            POS單號,
+                            貴賓電話,
+                            品項編碼,
+                            '' AS [品項名稱],
+                            '' AS 規格,
+                            加值,
+                            單價,
+                            數量,
+                            折讓,
+                            小計,
+                            招待備註,
+                            發票號碼,
+                            [載具/統編],
+                            備註,
+                            原銷貨單號
+                        FROM (
+                            SELECT 
+                                CONVERT(VARCHAR(8), S1.order_time, 112) AS 訂貨日期,
+                                CONVERT(VARCHAR(8), S1.order_time, 112) AS 銷貨日期,
+                                
+                                -- 客戶/供應商編碼：優先 iccardno，否則帶入 SHOP_ID
+                                ISNULL(NULLIF(LTRIM(RTRIM(V.iccardno)), ''), S1.SHOP_ID) AS [客戶/供應商編碼],
+                                
+                                S1.SHOP_ID AS 發貨倉庫,
+                                
+                                -- 交易類型 ERP_PAY_ID 轉換
+                                CASE S2.PAY_ID
+                                    WHEN '1'    THEN '15'
+                                    WHEN '4'    THEN '16'
+                                    WHEN '5'    THEN '16'
+                                    WHEN 'H'    THEN '17'
+                                    WHEN 'OP13' THEN '18'
+                                    WHEN 'Z'    THEN '19'
+                                    WHEN 'Z1'   THEN '1A'
+                                    ELSE ISNULL(S2.PAY_ID, '')
+                                END AS 交易類型,
+                                
+                                -- 查詢關鍵字
+                                CASE WHEN S1.FREE_MEMO = '寄賣/借出' THEN '寄賣' ELSE '' END AS 查詢關鍵字,
+                                
+                                E.EMP_NAME AS 服務人員,
+                                
+                                -- 類型中文轉換
+                                CASE S0.TYPE
+                                    WHEN '0' THEN '銷貨單'
+                                    WHEN '1' THEN '銷退單'
+                                    WHEN '2' THEN '被銷退單'
+                                    ELSE S0.TYPE
+                                END AS 類型,
+                                
+                                S1.SALE_ID AS POS單號,
+                                S1.SALE_SNO AS 原始序號,
+                                
+                                -- 貴賓電話優先權：TELEPHONE > MOBILE
+                                COALESCE(
+                                    NULLIF(LTRIM(RTRIM(V.TELEPHONE)), ''), 
+                                    NULLIF(LTRIM(RTRIM(V.MOBILE)), ''), 
+                                    ''
+                                ) AS 貴賓電話,
+                                
+                                P.prod_shortname AS 品項編碼,
+                                S1.TASTE_MEMO AS 加值,
+                                S1.SALE_PRICE AS 單價,
+                                S1.QTY AS 數量,
+                                S1.ITEM_DISC AS 折讓,
+                                
+                                -- 小計: 單價 * 數量 + 折讓
+                                (S1.SALE_PRICE * S1.QTY) + S1.ITEM_DISC AS 小計,
+                                
+                                S1.FREE_MEMO AS 招待備註,
+                                S1.invo_no AS 發票號碼,
+                                
+                                -- 載具/統編：載具優先，統編次之 (皆從 SALE00 取得)
+                                ISNULL(NULLIF(LTRIM(RTRIM(S0.buyer_number)), ''), ISNULL(LTRIM(RTRIM(S0.CUST_CODE)), '')) AS [載具/統編],
+                                
+                                -- 備註合併處理 (換行或單行)
+                                CASE 
+                                    WHEN ISNULL(S0.MEMO,'') <> '' AND ISNULL(S0.spec_memo,'') <> '' 
+                                        THEN LTRIM(RTRIM(S0.MEMO)) + CHAR(13) + CHAR(10) + LTRIM(RTRIM(S0.spec_memo))
+                                    ELSE ISNULL(NULLIF(LTRIM(RTRIM(S0.MEMO)), ''), ISNULL(LTRIM(RTRIM(S0.spec_memo)), ''))
+                                END AS 備註,
+                                
+                                S0.RETURNED_ID AS 原銷貨單號,
+                                
+                                -- 內部過濾與排序用
+                                S1.order_time AS RAW_TIME,
+                                S1.SHOP_ID AS RAW_SHOP,
+                                S0.TYPE AS RAW_TYPE
+                            FROM SALE01 S1
+                            INNER JOIN SALE00 S0 ON S1.SHOP_ID = S0.SHOP_ID AND S1.SALE_ID = S0.SALE_ID
+                            LEFT JOIN VIP00 V ON S0.VIP_ID = V.VIP_ID
+                            OUTER APPLY (
+                                SELECT TOP 1 PAY_ID FROM SALE02 
+                                WHERE SHOP_ID = S1.SHOP_ID AND SALE_ID = S1.SALE_ID
+                            ) S2
+                            LEFT JOIN EMPLOYEE E ON S0.SALE_USER = E.EMP_ID
+                            LEFT JOIN PRODUCT00 P ON S1.PROD_ID = P.PROD_ID
+                            WHERE S0.STATUS = '2'
+                            AND S1.SHOP_ID NOT IN ('A', 'TEST01')
+                        ) AS BaseData
+                        WHERE (RAW_TIME >= @S_DATE AND RAW_TIME < DATEADD(DAY, 1, @E_DATE))
+                        AND (ISNULL(@SHOP_IDS, '') = '' OR RAW_SHOP IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @ShopXml.nodes('/r/v') AS t(v)))
+                        AND (ISNULL(@DOC_TYPES, '') = '' OR RAW_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @TypeXml.nodes('/r/v') AS t(v)))
+                        ORDER BY 訂貨日期 DESC, [客戶/供應商編碼] ASC, 發貨倉庫 ASC, 交易類型 ASC, 序號 ASC
         `)
             return result.recordset
         } catch (err) {
