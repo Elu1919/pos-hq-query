@@ -9,6 +9,7 @@ const downloadModel = {
 
             const sDate = (filterIn.SALE_DATE_S || '').toString()
             const eDate = (filterIn.SALE_DATE_E || '').toString()
+
             const shopIds = Array.isArray(filterIn.SHOP_ID)
                 ? filterIn.SHOP_ID.join(',')
                 : (filterIn.SHOP_ID || '').toString()
@@ -23,118 +24,154 @@ const downloadModel = {
                 .input('SHOP_IDS_VAL', shopIds)
                 .input('TYPE_VAL', types)
                 .query(`
-                /* 篩選變數定義 */
-                DECLARE @S_DT NVARCHAR(10) = @S_DATE_VAL
-                DECLARE @E_DT NVARCHAR(10) = @E_DATE_VAL
-                DECLARE @S_IDS NVARCHAR(MAX) = @SHOP_IDS_VAL
-                DECLARE @T_IDS NVARCHAR(MAX) = @TYPE_VAL
+        /* 1. 變數初始化與日期處理 */
+        DECLARE @S_DT NVARCHAR(10) = @S_DATE_VAL
+        DECLARE @E_DT NVARCHAR(10) = @E_DATE_VAL
+        DECLARE @S_IDS NVARCHAR(MAX) = @SHOP_IDS_VAL
+        DECLARE @T_IDS NVARCHAR(MAX) = @TYPE_VAL
 
-                /* 1. 日期與 XML 處理 */
-                DECLARE @S_DATE DATETIME = CASE WHEN ISDATE(@S_DT) = 1 THEN CAST(@S_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
-                DECLARE @E_DATE DATETIME = CASE WHEN ISDATE(@E_DT) = 1 THEN CAST(@E_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+        DECLARE @S_DATE DATE = CASE WHEN ISDATE(@S_DT) = 1 THEN CAST(@S_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+        DECLARE @E_DATE DATE = CASE WHEN ISDATE(@E_DT) = 1 THEN CAST(@E_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
 
-                DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(ISNULL(@S_IDS, ''), ',', '</v><v>') + '</v></r>' AS XML)
-                DECLARE @TypeXml XML = CAST('<r><v>' + REPLACE(ISNULL(@T_IDS, ''), ',', '</v><v>') + '</v></r>' AS XML)
+        DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(CAST(@S_IDS AS NVARCHAR(MAX)), ',', '</v><v>') + '</v></r>' AS XML)
+        DECLARE @TypeXml XML = CAST('<r><v>' + REPLACE(CAST(@T_IDS AS NVARCHAR(MAX)), ',', '</v><v>') + '</v></r>' AS XML)
 
-                /* 2. 主查詢邏輯 */
-                SELECT 
-                    訂貨日期,
-                    DENSE_RANK() OVER (
-                        ORDER BY 訂貨日期 DESC, [客戶/供應商編碼] ASC, 發貨倉庫 ASC, 交易類型 ASC
-                    ) AS 序號,
-                    銷貨日期,
-                    [客戶/供應商編碼],
-                    '' AS [客戶/供應商名稱],
-                    '' AS 承辦人,
-                    發貨倉庫,
-                    交易類型,
-                    '' AS 貨幣,
-                    '' AS 匯率,
-                    查詢關鍵字,
-                    服務人員,
-                    類型,
-                    POS單號,
-                    貴賓電話,
-                    品項編碼,
-                    '' AS [品項名稱],
-                    '' AS 規格,
-                    加值,
-                    單價,
-                    數量,
-                    折讓,
-                    小計,
-                    招待備註,
-                    發票號碼,
-                    [載具/統編],
-                    備註,
-                    原銷貨單號
-                FROM (
-                    SELECT 
-                        CONVERT(VARCHAR(8), S1.order_time, 112) AS 訂貨日期,
-                        CONVERT(VARCHAR(8), S1.order_time, 112) AS 銷貨日期,
-                        ISNULL(NULLIF(LTRIM(RTRIM(V.iccardno)), ''), S1.SHOP_ID) AS [客戶/供應商編碼],
-                        S1.SHOP_ID AS 發貨倉庫,
-                        CASE S2.PAY_ID
-                            WHEN '1'    THEN '15'
-                            WHEN '4'    THEN '16'
-                            WHEN '5'    THEN '16'
-                            WHEN '6'    THEN '月結發票專用'
-                            WHEN 'H'    THEN '17'
-                            WHEN 'OP13' THEN '18'
-                            WHEN 'Z'    THEN '19'
-                            WHEN 'Z1'   THEN '1A'
-                            ELSE ISNULL(S2.PAY_ID, '')
-                        END AS 交易類型,
-                        CASE WHEN S1.FREE_MEMO = '寄賣/借出' THEN '寄賣' ELSE '' END AS 查詢關鍵字,
-                        E.EMP_NAME AS 服務人員,
-                        CASE S0.TYPE
-                            WHEN '0' THEN '銷貨單'
-                            WHEN '1' THEN '銷退單'
-                            WHEN '2' THEN '被銷退單'
-                            ELSE S0.TYPE
-                        END AS 類型,
-                        S1.SALE_ID AS POS單號,
-                        COALESCE(
-                            NULLIF(LTRIM(RTRIM(V.TELEPHONE)), ''), 
-                            NULLIF(LTRIM(RTRIM(V.MOBILE)), ''), 
-                            ''
-                        ) AS 貴賓電話,
-                        P.prod_shortname AS 品項編碼,
-                        S1.TASTE_MEMO AS 加值,
-                        S1.SALE_PRICE AS 單價,
-                        S1.QTY AS 數量,
-                        S1.ITEM_DISC AS 折讓,
-                        (S1.SALE_PRICE * S1.QTY) + S1.ITEM_DISC AS 小計,
-                        S1.FREE_MEMO AS 招待備註,
-                        S1.invo_no AS 發票號碼,
-                        ISNULL(NULLIF(LTRIM(RTRIM(S0.buyer_number)), ''), ISNULL(LTRIM(RTRIM(S0.CUST_CODE)), '')) AS [載具/統編],
-                        CASE 
-                            WHEN ISNULL(S0.MEMO,'') <> '' AND ISNULL(S0.spec_memo,'') <> '' 
-                                THEN LTRIM(RTRIM(S0.MEMO)) + CHAR(13) + CHAR(10) + LTRIM(RTRIM(S0.spec_memo))
-                            ELSE ISNULL(NULLIF(LTRIM(RTRIM(S0.MEMO)), ''), ISNULL(LTRIM(RTRIM(S0.spec_memo)), ''))
-                        END AS 備註,
-                        S0.RETURNED_ID AS 原銷貨單號,
-                        S1.order_time AS RAW_TIME,
-                        S1.SHOP_ID AS RAW_SHOP,
-                        S0.TYPE AS RAW_TYPE
-                    FROM SALE01 S1
-                    INNER JOIN SALE00 S0 ON S1.SHOP_ID = S0.SHOP_ID AND S1.SALE_ID = S0.SALE_ID
-                    LEFT JOIN VIP00 V ON S0.VIP_ID = V.VIP_ID
-                    OUTER APPLY (
-                        SELECT TOP 1 PAY_ID FROM SALE02 
-                        WHERE SHOP_ID = S1.SHOP_ID AND SALE_ID = S1.SALE_ID
-                    ) S2
-                    LEFT JOIN EMPLOYEE E ON S0.SALE_USER = E.EMP_ID
-                    LEFT JOIN PRODUCT00 P ON S1.PROD_ID = P.PROD_ID
-                    WHERE S0.STATUS = '2'
-                    AND S1.SHOP_ID NOT IN ('A', 'TEST01')
-                ) AS BaseData
-                WHERE (RAW_TIME >= @S_DATE AND RAW_TIME < DATEADD(DAY, 1, @E_DATE))
-                /* 增加 NVARCHAR 長度至 50 以處理長編號 */
-                AND (ISNULL(@S_IDS, '') = '' OR RAW_SHOP IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
-                AND (ISNULL(@T_IDS, '') = '' OR RAW_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @TypeXml.nodes('/r/v') AS t(v)))
-                ORDER BY 序號 ASC
-            `)
+        /* 2. 主查詢邏輯 */
+        SELECT
+            日期,
+            /* 修正序號邏輯：依照相同單據判斷依據進行 DENSE_RANK */
+            DENSE_RANK() OVER (
+                ORDER BY 
+                    日期 DESC, 
+                    [客戶/供應商編碼] ASC, 
+                    發貨倉庫 ASC, 
+                    [收貨倉庫] ASC, 
+                    交易類型_排序 ASC,
+                    交易類型 ASC
+            ) AS 序號,
+            [客戶/供應商編碼],
+            '' AS [客戶/供應商名稱],
+            發貨倉庫,
+            '' AS 承辦人,
+            交易類型,
+            '' AS 貨幣,
+            '' AS 匯率,
+            '' AS [銷貨單單號],
+            關鍵字,
+            服務人員,
+            類型,
+            POS單號,
+            貴賓電話,
+            CAST(品項編碼 AS NVARCHAR(MAX)) AS 品項編碼,
+            '' AS [品項名稱],
+            '' AS 規格,
+            數量,
+            加值,
+            單價,
+            總折讓,
+            '' AS 外幣金額,
+            [小計(稅前價)],
+            0 AS 營業稅,
+            招待備註,
+            發票號碼,
+            [載具/統編],
+            備註,
+            原銷貨單號,
+            '' AS 產生生產入庫
+        FROM (
+            SELECT 
+                CONVERT(VARCHAR(8), S1.order_time, 112) AS 日期,
+                S1.SHOP_ID AS 發貨倉庫,
+                '' AS [收貨倉庫],
+                CAST(ISNULL(NULLIF(LTRIM(RTRIM(V.iccardno)), ''), S1.SHOP_ID) AS NVARCHAR(100)) AS [客戶/供應商編碼],
+
+                /* 交易類型處理 */
+                CAST(CASE 
+                    WHEN ISNULL(LTRIM(RTRIM(S2.PAY_ID)), '') = '' THEN '13'
+                    WHEN S2.PAY_ID = '1'    THEN '15'
+                    WHEN S2.PAY_ID = '4'    THEN '16'
+                    WHEN S2.PAY_ID = '5'    THEN '16'
+                    WHEN S2.PAY_ID = '6'    THEN '月結發票專用'
+                    WHEN S2.PAY_ID = 'H'    THEN '17'
+                    WHEN S2.PAY_ID = 'OP13' THEN '18'
+                    WHEN S2.PAY_ID = 'Z'    THEN '19'
+                    WHEN S2.PAY_ID = 'Z1'   THEN '1A'
+                    ELSE N'未設定的「' + CAST(ISNULL(S2.PAY_ID, '') AS NVARCHAR(MAX)) + N'」，請通知系統管理員'
+                END AS NVARCHAR(MAX)) AS 交易類型,
+
+                /* 交易類型排序輔助 (確保 13 < 15 < 16...) */
+                CASE 
+                    WHEN ISNULL(LTRIM(RTRIM(S2.PAY_ID)), '') = '' THEN '13'
+                    WHEN S2.PAY_ID = '1'    THEN '15'
+                    WHEN S2.PAY_ID = '4'    THEN '16'
+                    WHEN S2.PAY_ID = '5'    THEN '16'
+                    WHEN S2.PAY_ID = '6'    THEN '16.5' -- 介於 16 與 17 之間
+                    WHEN S2.PAY_ID = 'H'    THEN '17'
+                    WHEN S2.PAY_ID = 'OP13' THEN '18'
+                    WHEN S2.PAY_ID = 'Z'    THEN '19'
+                    WHEN S2.PAY_ID = 'Z1'   THEN '1A'
+                    ELSE 'ZZZ'
+                END AS 交易類型_排序,
+
+                CASE WHEN S1.FREE_MEMO = '寄賣/借出' THEN '寄賣' ELSE '' END AS 關鍵字,
+                ISNULL(E.EMP_NAME, '') AS 服務人員,
+
+                CAST(CASE S0.TYPE
+                    WHEN '0' THEN '銷貨單'
+                    WHEN '1' THEN '銷退單'
+                    WHEN '2' THEN '被銷退單'
+                    ELSE N'未設定的「' + CAST(ISNULL(S0.TYPE, '') AS NVARCHAR(MAX)) + N'」，請通知系統管理員'
+                END AS NVARCHAR(MAX)) AS 類型,
+
+                S1.SALE_ID AS POS單號,
+                COALESCE(NULLIF(LTRIM(RTRIM(V.TELEPHONE)), ''), NULLIF(LTRIM(RTRIM(V.MOBILE)), ''), '') AS 貴賓電話,
+                
+                CAST(
+                  ISNULL(
+                    CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                    N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號'
+                  ) AS NVARCHAR(MAX)
+                ) AS 品項編碼,
+                
+                S1.QTY AS 數量,
+                S1.TASTE_MEMO AS 加值,
+                S1.SALE_PRICE AS 單價,
+                S1.ITEM_DISC AS 總折讓,
+                (S1.SALE_PRICE * S1.QTY) + S1.ITEM_DISC AS [小計(稅前價)],
+                S1.FREE_MEMO AS 招待備註,
+                S1.invo_no AS 發票號碼,
+                ISNULL(NULLIF(LTRIM(RTRIM(S0.buyer_number)), ''), ISNULL(LTRIM(RTRIM(S0.CUST_CODE)), '')) AS [載具/統編],
+                
+                CASE 
+                    WHEN ISNULL(S0.MEMO,'') <> '' AND ISNULL(S0.spec_memo,'') <> '' 
+                        THEN LTRIM(RTRIM(S0.MEMO)) + CHAR(13) + CHAR(10) + LTRIM(RTRIM(S0.spec_memo))
+                    ELSE ISNULL(NULLIF(LTRIM(RTRIM(S0.MEMO)), ''), ISNULL(LTRIM(RTRIM(S0.spec_memo)), ''))
+                END AS 備註,
+                
+                S0.RETURNED_ID AS 原銷貨單號,
+
+                S1.order_time AS RAW_TIME,
+                S1.SHOP_ID AS RAW_SHOP,
+                S0.TYPE AS RAW_TYPE
+            FROM SALE01 S1
+            INNER JOIN SALE00 S0 ON S1.SHOP_ID = S0.SHOP_ID AND S1.SALE_ID = S0.SALE_ID
+            LEFT JOIN VIP00 V ON S0.VIP_ID = V.VIP_ID
+            OUTER APPLY (
+                SELECT TOP 1 PAY_ID FROM SALE02 
+                WHERE SHOP_ID = S1.SHOP_ID AND SALE_ID = S1.SALE_ID
+            ) S2
+            LEFT JOIN EMPLOYEE E ON S0.SALE_USER = E.EMP_ID
+            LEFT JOIN PRODUCT00 P ON S1.PROD_ID = P.PROD_ID
+            WHERE S0.STATUS = '2'
+            AND S1.SHOP_ID NOT IN ('A', 'TEST01')
+        ) AS BaseData
+        WHERE (RAW_TIME >= @S_DATE AND RAW_TIME < DATEADD(DAY, 1, @E_DATE))
+        AND (@S_IDS = '' OR RAW_SHOP IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
+        AND (@T_IDS = '' OR RAW_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @TypeXml.nodes('/r/v') AS t(v)))
+        
+        /* 最終排序：依序號遞增 */
+        ORDER BY 序號 ASC
+      `)
             return result.recordset
         } catch (err) {
             console.error('銷貨資料取得失敗：', err)
@@ -189,7 +226,8 @@ const downloadModel = {
                     '' AS 倉庫調撥單號,
                     POS單據類型,
                     POS單號,
-                    品項編碼,
+                    /* 關鍵修正：確保報錯訊息不被截斷 */
+                    CAST(品項編碼 AS NVARCHAR(MAX)) AS 品項編碼,
                     '' AS 品項名稱,
                     '' AS 規格,
                     數量,
@@ -200,7 +238,10 @@ const downloadModel = {
                     SELECT 
                         CONVERT(VARCHAR(8), T10.INPUT_DATE, 112) AS 日期, 'A' AS 出貨倉庫, T10.STK_ID AS 收貨倉庫,
                         '供應商進貨' AS POS單據類型, T11.TAKEIN_ID AS POS單號,
-                        P.prod_shortname AS 品項編碼, T11.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        /* 品項編碼判斷邏輯 */
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        T11.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
                         T10.MEMO AS 備註, 'TAKEIN' AS TABLE_TYPE, T10.SHOP_ID AS SHOP_ID, 
                         T10.INPUT_DATE AS RAW_DATE
                     FROM TAKEIN11 T11
@@ -214,7 +255,9 @@ const downloadModel = {
                     SELECT 
                         CONVERT(VARCHAR(8), T00.INPUT_DATE, 112) AS 日期, T00.STK_ID AS 出貨倉庫, 'A' AS 收貨倉庫,
                         '供應商退貨' AS POS單據類型, T01.TAKEOUT_ID AS POS單號,
-                        P.prod_shortname AS 品項編碼, T01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        T01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
                         T00.MEMO AS 備註, 'TAKEOUT' AS TABLE_TYPE, T00.SHOP_ID AS SHOP_ID, 
                         T00.INPUT_DATE AS RAW_DATE
                     FROM TAKEOUT01 T01
@@ -228,7 +271,9 @@ const downloadModel = {
                     SELECT 
                         CONVERT(VARCHAR(8), O00.INPUT_DATE, 112) AS 日期, O00.OUT_SHOP AS 出貨倉庫, O00.TO_SHOP AS 收貨倉庫,
                         '調撥' AS POS單據類型, O01.OUT_ID AS POS單號,
-                        P.prod_shortname AS 品項編碼, O01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        O01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
                         O00.MEMO AS 備註, 'OUT' AS TABLE_TYPE, O00.SHOP_ID AS SHOP_ID, 
                         O00.INPUT_DATE AS RAW_DATE
                     FROM OUT01 O01
@@ -247,7 +292,9 @@ const downloadModel = {
                     SELECT 
                         CONVERT(VARCHAR(8), I00.INPUT_DATE, 112) AS 日期, 'A' AS 出貨倉庫, I00.IN_SHOP AS 收貨倉庫,
                         '總部進貨' AS POS單據類型, I00.IN_ID AS POS單號,
-                        P.prod_shortname AS 品項編碼, I01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        I01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
                         I00.MEMO AS 備註, 'IN' AS TABLE_TYPE, I00.SHOP_ID AS SHOP_ID, 
                         I00.INPUT_DATE AS RAW_DATE
                     FROM IN01 I01
@@ -263,7 +310,9 @@ const downloadModel = {
                     SELECT 
                         CONVERT(VARCHAR(8), SB0.INPUT_DATE, 112) AS 日期, SB0.STK_ID AS 出貨倉庫, SB0.STK_ID AS 收貨倉庫,
                         '總部退貨' AS POS單據類型, SB0.SEND_BACK_ID AS POS單號,
-                        P.prod_shortname AS 品項編碼, SB1.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        SB1.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
                         SB0.MEMO AS 備註, 'SEND_BACK' AS TABLE_TYPE, SB0.SHOP_ID AS SHOP_ID, 
                         SB0.INPUT_DATE AS RAW_DATE
                     FROM SEND_BACK01 SB1
@@ -273,7 +322,6 @@ const downloadModel = {
                     WHERE SB0.STATUS = '2' AND SB0.SHOP_ID NOT IN ('A', 'TEST01')
                 ) AS CombinedData
                 WHERE (RAW_DATE >= @S_DATE AND RAW_DATE < DATEADD(DAY, 1, @E_DATE))
-                /* 增加 NVARCHAR 長度至 50 以處理長編號 */
                 AND (ISNULL(@S_IDS, '') = '' OR SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
                 AND (ISNULL(@T_IDS, '') = '' OR TABLE_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @TypeXml.nodes('/r/v') AS t(v)))
                 ORDER BY 序號 ASC
@@ -436,7 +484,7 @@ const downloadModel = {
                 /* 2. 主查詢邏輯 */
                 SELECT 
                     日期,
-                    /* 序號重編：依照日期(降序)、客戶、倉庫、單號排序，產出唯一遞增序號 */
+                    /* 序號重編：依照日期(降序)、客戶、倉庫、單號排序 */
                     ROW_NUMBER() OVER (
                         ORDER BY RAW_DATE DESC, [客戶/供應商編碼] ASC, 發貨倉庫 ASC, POS單號 ASC, 原始序號 ASC
                     ) AS 序號,
@@ -444,7 +492,8 @@ const downloadModel = {
                     '' AS [客戶/供應商名稱],
                     發貨倉庫,
                     POS單號,
-                    品項編碼,
+                    /* 關鍵修正：確保報錯訊息不被截斷且帶入商品名稱 */
+                    CAST(品項編碼 AS NVARCHAR(MAX)) AS 品項編碼,
                     '' AS 品項名稱,
                     '' AS 規格,
                     數量,
@@ -458,7 +507,11 @@ const downloadModel = {
                         M0.STK_ID AS 發貨倉庫,
                         M1.MAT_ID AS POS單號,
                         M1.MAT_SNO AS 原始序號,
-                        P.prod_shortname AS 品項編碼,
+                        /* 品項編碼判斷邏輯：NULLIF 結合 CAST 防止截斷 */
+                        ISNULL(
+                            CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                            N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號'
+                        ) AS 品項編碼,
                         M1.QUANTITY AS 數量,
                         E.EMP_NAME AS 服務人員,
                         R.detail AS 領用原因,
@@ -507,7 +560,13 @@ const downloadModel = {
                     '' AS [倉庫調撥單號],
                     '總部出貨' AS [POS單據類型],
                     D.OUT_ID AS [POS單號],
-                    P.prod_shortname AS [品項編碼],
+                    /* 關鍵修正：品項編碼判斷邏輯，結合 CAST 防止截斷 */
+                    CAST(
+                        ISNULL(
+                            CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                            N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號'
+                        ) AS NVARCHAR(MAX)
+                    ) AS [品項編碼],
                     '' AS [品項名稱],
                     '' AS [規格],
                     D.QUANTITY AS [數量],

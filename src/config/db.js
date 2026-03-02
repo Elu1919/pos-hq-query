@@ -42,7 +42,8 @@ const config = {
   database: process.env.DB_DATABASE,
   options: {
     encrypt: false,
-    trustServerCertificate: true
+    trustServerCertificate: true,
+    textsize: 2147483647
   }
 }
 
