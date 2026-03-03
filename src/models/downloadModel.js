@@ -308,7 +308,7 @@ const downloadModel = {
                     UNION ALL
 
                     SELECT 
-                        CONVERT(VARCHAR(8), SB0.INPUT_DATE, 112) AS 日期, SB0.STK_ID AS 出貨倉庫, SB0.STK_ID AS 收貨倉庫,
+                        CONVERT(VARCHAR(8), SB0.INPUT_DATE, 112) AS 日期, SB0.STK_ID AS 出貨倉庫, SB0.IN_SHOP AS 收貨倉庫,
                         '總部退貨' AS POS單據類型, SB0.SEND_BACK_ID AS POS單號,
                         ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
                                N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
