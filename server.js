@@ -1,3 +1,17 @@
+const { TextDecoder, TextEncoder } = require('util')
+if (typeof global.TextDecoder === 'undefined') {
+  global.TextDecoder = TextDecoder
+}
+
+// 修正 pkg 環境下 fontkit 找不到 ascii 編碼的問題
+const originalTextDecoder = global.TextDecoder
+global.TextDecoder = class extends originalTextDecoder {
+  constructor(encoding, options) {
+    if (encoding === 'ascii') encoding = 'utf-8' // 強制轉向 utf-8
+    super(encoding, options)
+  }
+}
+
 const express = require('express')
 
 const connectMongoDB = require('./src/config/mongodb')

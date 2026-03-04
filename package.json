@@ -8,7 +8,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "pkg . --targets node18-win-x64 --output dist/app.exe"
+    "build": "pkg . --targets node18-win-x64 --output ../wj-pos-query/app.exe && xcopy public ..\\wj-pos-query\\public /E /I /Y && xcopy src\\views ..\\wj-pos-query\\src\\views /E /I /Y"
   },
   "pkg": {
     "assets": [
@@ -50,5 +50,9 @@
     "nodemon": "^3.1.10",
     "pdf-lib": "^1.17.1",
     "utc": "^0.1.0"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1",
+    "rcedit": "^5.0.2"
   }
 }
