@@ -34,6 +34,15 @@ async function getShopList() {
 }
 
 const prodController = {
+  showProdDetailsPage: async (req, res) => {
+    try {
+      const lists = await getLists()
+      res.render('prodQuery', { lists })
+
+    } catch (err) {
+      res.status(500).send('資料取得失敗')
+    }
+  },
   showProdDetails: async (req, res) => {
     const filterIn = { ...req.body }
     try {

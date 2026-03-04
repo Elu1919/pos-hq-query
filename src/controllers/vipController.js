@@ -20,6 +20,17 @@ async function getLists() {
 }
 
 const vipController = {
+  showVipDetailsPage: async (req, res) => {
+    const filterIn = { ...req.body }
+
+    try {
+      const lists = await getLists()
+      res.render('vipQuery', { lists })
+    } catch (err) {
+      console.error('❌ VIP資料取得失敗', err)
+      res.status(500).send('資料取得失敗')
+    }
+  },
   showVipDetails: async (req, res) => {
     const filterIn = { ...req.body }
 

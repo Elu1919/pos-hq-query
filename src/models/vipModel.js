@@ -4,110 +4,110 @@ const dayjs = require('dayjs')
 const { poolPromise } = require('../config/db')
 
 const vipData = {
-  getAllVipData: async (filter) => {
-
+  getAllVipData: async (filterIn) => {
     try {
       const pool = await poolPromise
 
+      // JS 層處理數值預設值
+      const disabledOnly = parseInt(filterIn.onlyDisabled || 0)
+
       const result = await pool.request()
+        .input('VIP_ID', filterIn.VIP_ID || '')
+        .input('NAME', filterIn.NAME || '')
+        .input('MEMO', filterIn.MEMO || '')
+        .input('TELEPHONE', filterIn.TEL || '')
+        .input('LINKMAN', filterIn.LINKMAN || '')
+        .input('COMPANY', filterIn.COMPANY || '')
+        .input('ADDRESS', filterIn.ADDRESS || '')
+        .input('VIPGRP_ID', filterIn.vipgrp_id || '')
+        .input('VIP_CODE', filterIn.vip_code || '')
+        .input('APPLY_SHOP', filterIn.APPLY_SHOP || '')
+        .input('DISABLED_ONLY', disabledOnly)
         .query(`
-              DECLARE @VipId       NVARCHAR(50)  = '${filter.VIP_ID}'
-              DECLARE @VipName     NVARCHAR(50)  = '${filter.NAME}'
-              DECLARE @Memo        NVARCHAR(200) = '${filter.MEMO}'   
-              DECLARE @Telephone   NVARCHAR(30)  = '${filter.TEL}'
-              DECLARE @Linkman     NVARCHAR(50)  = '${filter.LINKMAN}'
-              DECLARE @Company     NVARCHAR(100) = '${filter.COMPANY}'
-              DECLARE @Address     NVARCHAR(200) = '${filter.ADDRESS}' 
-              DECLARE @VipGrpId    NVARCHAR(50)  = '${filter.vipgrp_id}'
-              DECLARE @VipCode     NVARCHAR(20)  = '${filter.vip_code}'
-              DECLARE @ApplyShop   NVARCHAR(20)  = '${filter.APPLY_SHOP}'
-              DECLARE @DisabledOnly BIT = ${filter.onlyDisabled || 0}   -- 0 = 只搜尋停用, 1 = 排除停用
+        /* 1. 主查詢邏輯 */
+        SELECT
+          v.VIP_ID,
+          v.NAME,
+          v.MEMO,
+          v.ADDRESS,
+          v.TELEPHONE,
+          v.LINKMAN,
+          v.EMAIL,
+          v.MOBILE,
+          v.COMPANY,
+          v.COMPANY_ADDR,
+          v.vipgrp_id,
+          g.vipgrp_name,
+          v.iccardno,
+          v.vip_code,
+          v.modify_date,
+          v.last_update,
+          v.APPLY_DATE,
+          v.APPLY_SHOP
+        FROM VIP00 v
+        LEFT JOIN vip_group00 g ON v.vipgrp_id = g.vipgrp_id
 
-              SELECT
-                  v.VIP_ID,
-                  v.NAME,
-                  v.MEMO,
-                  v.ADDRESS,
-                  v.TELEPHONE,
-                  v.LINKMAN,
-                  v.EMAIL,
-                  v.MOBILE,
-                  v.COMPANY,
-                  v.COMPANY_ADDR,
-                  v.vipgrp_id,
-                  g.vipgrp_name,
-                  v.iccardno,
-                  v.vip_code,
-                  v.modify_date,
-                  v.last_update,
-                  v.APPLY_DATE,
-                  v.APPLY_SHOP
-              FROM VIP00 v
-              LEFT JOIN vip_group00 g
-                  ON v.vipgrp_id = g.vipgrp_id
+        WHERE 1 = 1
+          AND (@VIP_ID = '' OR v.VIP_ID LIKE '%' + @VIP_ID + '%')
+          AND (@NAME = '' OR v.NAME LIKE '%' + @NAME + '%')
 
-              WHERE 1 = 1
-                  AND (@VipId      = '' OR v.VIP_ID LIKE '%' + @VipId + '%')
-                  AND (@VipName    = '' OR v.NAME LIKE '%' + @VipName + '%')
+          -- MEMO + iccardno 模糊搜尋
+          AND (
+            @MEMO = '' 
+            OR v.MEMO LIKE '%' + @MEMO + '%'
+            OR v.iccardno LIKE '%' + @MEMO + '%'
+          )
 
-                  -- MEMO + iccardno
-                  AND (
-                          @Memo = '' 
-                          OR v.MEMO     LIKE '%' + @Memo + '%'
-                          OR v.iccardno LIKE '%' + @Memo + '%'
-                      )
+          -- 電話 + 手機 模糊搜尋
+          AND (
+            @TELEPHONE = '' 
+            OR v.TELEPHONE LIKE '%' + @TELEPHONE + '%'
+            OR v.MOBILE LIKE '%' + @TELEPHONE + '%'
+          )
 
-                  -- 電話 + 手機
-                  AND (
-                          @Telephone = '' 
-                          OR v.TELEPHONE LIKE '%' + @Telephone + '%'
-                          OR v.MOBILE    LIKE '%' + @Telephone + '%'
-                      )
+          AND (@LINKMAN = '' OR v.LINKMAN LIKE '%' + @LINKMAN + '%')
+          AND (@COMPANY = '' OR v.COMPANY LIKE '%' + @COMPANY + '%')
 
-                  AND (@Linkman    = '' OR v.LINKMAN LIKE '%' + @Linkman + '%')
-                  AND (@Company    = '' OR v.COMPANY LIKE '%' + @Company + '%')
+          -- 住址 + 公司地址 模糊搜尋
+          AND (
+            @ADDRESS = ''
+            OR v.ADDRESS LIKE '%' + @ADDRESS + '%'
+            OR v.COMPANY_ADDR LIKE '%' + @ADDRESS + '%'
+          )
 
-                  -- ADDRESS + COMPANY_ADDR
-                  AND (
-                          @Address = ''
-                          OR v.ADDRESS       LIKE '%' + @Address + '%'
-                          OR v.COMPANY_ADDR  LIKE '%' + @Address + '%'
-                      )
+          AND (@VIPGRP_ID = '' OR v.vipgrp_id = @VIPGRP_ID)
+          AND (@VIP_CODE = '' OR v.vip_code LIKE '%' + @VIP_CODE + '%')
+          AND (@APPLY_SHOP = '' OR v.APPLY_SHOP = @APPLY_SHOP)
 
-                  AND (@VipGrpId = '' OR v.vipgrp_id = @VipGrpId)
+          -- 停用狀態邏輯 (0 = 只看停用, 1 = 排除停用)
+          AND (
+            (@DISABLED_ONLY = 0 AND v.NAME LIKE '%停用%') 
+            OR (@DISABLED_ONLY = 1 AND v.NAME NOT LIKE '%停用%')
+          )
 
-                  AND (@VipCode    = '' OR v.vip_code LIKE '%' + @VipCode + '%')
-                  AND (@ApplyShop  = '' OR v.APPLY_SHOP = @ApplyShop)
+          -- 排除空號與測試帳號
+          AND (
+            (
+              (v.VIP_ID LIKE 'CR%' OR v.VIP_ID LIKE 'B2B%' OR v.VIP_ID LIKE 'SALE%')
+              AND v.VIP_ID <> v.NAME
+            )
+            OR
+            (
+              v.VIP_ID LIKE 'CUST%'
+              AND v.CARD IS NOT NULL 
+              AND (v.TELEPHONE IS NOT NULL OR v.MOBILE IS NOT NULL)
+            )
+          )
+          AND v.VIP_ID NOT LIKE 'TEST%'
 
-                  -- 排除停用
-                  AND (
-                          (@DisabledOnly = 0 AND v.NAME LIKE '%停用%') 
-                          OR
-                          (@DisabledOnly = 1 AND v.NAME NOT LIKE '%停用%')
-                      )
-
-                  -- 排除空號邏輯
-                  AND (
-                          (
-                              (v.VIP_ID LIKE 'CR%' OR v.VIP_ID LIKE 'B2B%' OR v.VIP_ID LIKE 'SALE%')
-                              AND v.VIP_ID <> v.NAME
-                          )
-                          OR
-                          (
-                              v.VIP_ID LIKE 'CUST%'
-                              AND v.CARD IS NOT NULL 
-                              AND (v.TELEPHONE IS NOT NULL OR v.MOBILE IS NOT NULL)
-                          )
-                      )
-                  AND v.VIP_ID NOT LIKE 'TEST%'
-
-              ORDER BY v.VIP_ID
-              `)
+        ORDER BY v.VIP_ID
+      `)
 
       const totalCount = result.recordset.length
       const vips = result.recordset.map(row => {
-        const fields = ['APPLY_DATE', 'modify_date', 'last_update']
-        fields.forEach(key => {
+        // 統一處理日期欄位格式
+        const dateFields = ['APPLY_DATE', 'modify_date', 'last_update']
+        dateFields.forEach(key => {
           if (row[key]) {
             const d = row[key].toISOString().replace('Z', '')
             row[key] = dayjs(d).format('YY-MM-DD HH:mm')
@@ -119,7 +119,7 @@ const vipData = {
       return { vips, totalCount }
 
     } catch (err) {
-      console.error('資料取得失敗：', err)
+      console.error('VIP 資料取得失敗：', err)
       throw err
     }
   },

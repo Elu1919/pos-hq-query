@@ -11,6 +11,6 @@ router.post('/prod-data/export/barcode', formController.exportProdBarcode)
 router.post('/sale-data/qua', prodController.showProdQuaDetails)
 router.get('/prod-data', prodController.showProdDetails)
 router.post('/prod-data', prodController.showProdDetails)
-router.get('/', prodController.showProdDetails)
+router.get('/', prodController.showProdDetailsPage)
 
 module.exports = router

@@ -7,7 +7,7 @@ const formController = require('../controllers/formController')
 const router = express.Router()
 
 router.post('/sale-data/export', formController.exportSalesData)
-router.get('/sale-data', saleController.showSaleDetails)
+router.get('/sale-data', saleController.showSaleDetailsPage)
 router.post('/sale-data', saleController.showSaleDetails)
 
 module.exports = router
