@@ -97,7 +97,7 @@ const saleData = {
           @SALE_DATE_S DATETIME = ${filter.SALE_DATE_S}, -- 銷售起日 
           @SALE_DATE_E DATETIME = ${filter.SALE_DATE_E}, -- 銷售迄日 
           @SALE_ID NVARCHAR(20) = ${filter.SALE_ID}, -- 單據編號 
-          @SHOP_ID NVARCHAR(MAX)= 'TEST01', -- 銷貨分店 
+          @SHOP_ID NVARCHAR(MAX)= ${filter.SHOP_ID}, -- 銷貨分店 
           @MEMO NVARCHAR(100)= ${filter.MEMO}, -- 備註 
           @BUYER_NUMBER NVARCHAR(50) = ${filter.buyer_number}, -- 載具號碼 
           @INVO_NO_B NVARCHAR(20) = ${filter.invo_no_b}, -- 發票號碼 
@@ -110,7 +110,7 @@ const saleData = {
           --多門市 table 變數 
           DECLARE 
           @SHOP_LIST TABLE(SHOP_ID NVARCHAR(20)); 
-          INSERT INTO @SHOP_LIST VALUES ('TEST01') --${filter.SHOP_ID_LIST}; 
+          INSERT INTO @SHOP_LIST VALUES ${filter.SHOP_ID_LIST}; 
           
           --單據類型 table 變數 
           DECLARE 
@@ -182,7 +182,7 @@ const saleData = {
            LEFT JOIN PAYMENT PAY ON S2.PAY_ID = PAY.PAY_ID 
            WHERE 
            S0.STATUS = '2' 
-           --AND S0.SHOP_ID NOT IN ('A', 'TEST01')
+           AND S0.SHOP_ID NOT IN ('A', 'TEST01')
 
            ${filter.is_inv} 
                AND (@VIP_ID      IS NULL OR S0.VIP_ID      LIKE '%' + @VIP_ID + '%')
