@@ -39,7 +39,6 @@ const downloadModel = {
         /* 2. 主查詢邏輯 */
         SELECT
             日期,
-            /* 修正序號邏輯：依照相同單據判斷依據進行 DENSE_RANK */
             DENSE_RANK() OVER (
                 ORDER BY 
                     日期 DESC, 
@@ -85,7 +84,6 @@ const downloadModel = {
                 '' AS [收貨倉庫],
                 CAST(ISNULL(NULLIF(LTRIM(RTRIM(V.iccardno)), ''), S1.SHOP_ID) AS NVARCHAR(100)) AS [客戶/供應商編碼],
 
-                /* 交易類型處理 */
                 CAST(CASE 
                     WHEN ISNULL(LTRIM(RTRIM(S2.PAY_ID)), '') = '' THEN '13'
                     WHEN S2.PAY_ID = '1'    THEN '15'
@@ -99,13 +97,12 @@ const downloadModel = {
                     ELSE N'未設定的「' + CAST(ISNULL(S2.PAY_ID, '') AS NVARCHAR(MAX)) + N'」，請通知系統管理員'
                 END AS NVARCHAR(MAX)) AS 交易類型,
 
-                /* 交易類型排序輔助 (確保 13 < 15 < 16...) */
                 CASE 
                     WHEN ISNULL(LTRIM(RTRIM(S2.PAY_ID)), '') = '' THEN '13'
                     WHEN S2.PAY_ID = '1'    THEN '15'
                     WHEN S2.PAY_ID = '4'    THEN '16'
                     WHEN S2.PAY_ID = '5'    THEN '16'
-                    WHEN S2.PAY_ID = '6'    THEN '16.5' -- 介於 16 與 17 之間
+                    WHEN S2.PAY_ID = '6'    THEN '16.5'
                     WHEN S2.PAY_ID = 'H'    THEN '17'
                     WHEN S2.PAY_ID = 'OP13' THEN '18'
                     WHEN S2.PAY_ID = 'Z'    THEN '19'
@@ -136,8 +133,11 @@ const downloadModel = {
                 S1.QTY AS 數量,
                 S1.TASTE_MEMO AS 加值,
                 S1.SALE_PRICE AS 單價,
-                S1.ITEM_DISC AS 總折讓,
-                (S1.SALE_PRICE * S1.QTY) + S1.ITEM_DISC AS [小計(稅前價)],
+                /* 關鍵修正：總折讓 = ITEM_DISC + itemdisc_total */
+                ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0) AS 總折讓,
+                /* 小計同步修正：(單價 * 數量) + 總折讓 (注意折讓通常為負數) */
+                (S1.SALE_PRICE * S1.QTY) + (ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0)) AS [小計(稅前價)],
+                
                 S1.FREE_MEMO AS 招待備註,
                 S1.invo_no AS 發票號碼,
                 ISNULL(NULLIF(LTRIM(RTRIM(S0.buyer_number)), ''), ISNULL(LTRIM(RTRIM(S0.CUST_CODE)), '')) AS [載具/統編],
@@ -169,7 +169,6 @@ const downloadModel = {
         AND (@S_IDS = '' OR RAW_SHOP IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
         AND (@T_IDS = '' OR RAW_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @TypeXml.nodes('/r/v') AS t(v)))
         
-        /* 最終排序：依序號遞增 */
         ORDER BY 序號 ASC
       `)
             return result.recordset

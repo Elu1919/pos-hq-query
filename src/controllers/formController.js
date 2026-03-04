@@ -26,8 +26,8 @@ const formController = {
       // 標題列
       sheet.addRow([
         '門市', '單據類型', '單據編號', '日期', '貴賓名稱',
-        '加值', '品名', '售價', '數量', '單位', '小計', '折讓', '招待備註',
-        '總金額', '總折讓', '結帳方式', '發票號碼', '載具號碼', '單據備註'
+        '加值', '品名', '售價', '數量', '單位', '小計', '單品折讓', '招待備註',
+        '整單折讓', '總金額', '結帳方式', '發票號碼', '載具號碼', '單據備註'
       ])
 
       let currentRow = 2
@@ -53,8 +53,8 @@ const formController = {
             prod.SUBTOTAL,
             prod.ITEM_DISC,
             prod.FREE_MEMO,
-            index === 0 ? sale.amount : null,
             index === 0 ? sale.TOT_DISCHARGE : null,
+            index === 0 ? sale.amount : null,
             index === 0 ? sale.PAY_NAME : null,
             index === 0 ? sale.invo_no_b : null,
             index === 0 ? sale.buyer_number : null,
