@@ -18,7 +18,7 @@ const posDataController = {
         shopData.getShopList(),
         saleDataModel.getSaleTypeList(),
       ])
-      res.render('posDataDownload', { shop, saleType })
+      res.render('posHQDownload', { shop, saleType })
     } catch (err) {
       console.error('❌ 畫面載入失敗', err)
       res.status(500).send('畫面載入失敗')

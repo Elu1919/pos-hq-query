@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.show()
 
     try {
-      const url = `/pos/data/download/transfer/no-transfer?dateS=${dateS}&dateE=${dateE}&shops=${selectedShops}`
+      const url = `/pos-hq/data/download/transfer/no-transfer?dateS=${dateS}&dateE=${dateE}&shops=${selectedShops}`
       const response = await fetch(url)
 
       const contentType = response.headers.get('content-type')

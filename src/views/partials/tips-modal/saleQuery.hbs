@@ -1,0 +1,78 @@
+<div class="modal fade"
+     id="hint1"
+     tabindex="-1"
+     aria-labelledby="hintLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"
+            id="hintLabel">操作提示</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        {{>common-notes01}}
+
+        <p>
+          <button class="btn btn-primary"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#ifo-search"
+                  aria-expanded="false"
+                  aria-controls="ifo-search">
+            銷售資料 查詢 ▼
+          </button>
+        </p>
+        <div class="collapse mb-3"
+             id="ifo-search">
+          <div class="card card-body">
+            <p><span class="fs-6 badge bg-secondary">1</span> 輸入查詢條件</p>
+            <p><span class="fs-6 badge bg-secondary">2</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
+            <p><span class="fs-6 badge bg-info text-black">注意</span> 查詢資料區間越長，花費時間越久</p>
+
+            <p class="text-danger fs-5 fw-bold mb-1 mt-4">查詢欄位說明:</p>
+            <ol class="list-group list-group-flush list-group-numbered">
+              <li class="list-group-item">日期範圍：無輸入，預設只查當日資料</li>
+              <li class="list-group-item">多選欄位：無選擇，預設查全部資料</li>
+            </ol>
+
+            <p class="text-danger fs-5 fw-bold mb-1 mt-3">金額欄位說明:</p>
+            <ol class="list-group list-group-flush list-group-numbered">
+              <li class="list-group-item">售價：商品售出價格</li>
+              <li class="list-group-item">加值：會顯示加值名稱，如：保養廠、機車行</li>
+              <li class="list-group-item">小計：售價 × 數量</li>
+              <li class="list-group-item">品項折讓：單品項的總折價金額 (招待贈送)</li>
+              <li class="list-group-item">整單折讓：整單折價金額 (特殊折扣)：打折會以 (小計加總+品項折讓加總) 做計算</li>
+              <li class="list-group-item">總金額：小計加總 + 品項折讓加總 + 整單折讓</li>
+            </ol>
+          </div>
+        </div>
+
+        <p>
+          <button class="btn btn-success"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#ifo-exportToExcel"
+                  aria-expanded="false"
+                  aria-controls="ifo-exportToExcel">
+            匯出 EXCEL ▼
+          </button>
+        </p>
+        <div class="collapse mb-3"
+             id="ifo-exportToExcel">
+          <div class="card card-body">
+            <p><span class="fs-6 badge bg-secondary">1</span> 先執行 <span class="fs-6 badge bg-primary py-2"> 查詢 </span>
+            </p>
+            <p><span class="fs-6 badge bg-secondary">2</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
+            <p><span class="fs-6 badge bg-info text-black">注意</span> 匯出資料越多，花費時間越久</p>
+          </div>
+        </div>
+
+        {{>common-notes02}}
+      </div>
+    </div>
+  </div>
+</div>

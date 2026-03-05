@@ -13,9 +13,7 @@ global.TextDecoder = class extends originalTextDecoder {
 }
 
 const express = require('express')
-
 const connectMongoDB = require('./src/config/mongodb')
-
 const path = require('path')
 const exphbs = require('express-handlebars')
 const hbsHelpers = require('./src/helpers/hbsHelpers')
@@ -24,6 +22,9 @@ const hbsHelpers = require('./src/helpers/hbsHelpers')
 // 取代 __dirname，支援 pkg 打包後路徑
 const basePath = (typeof process.pkg !== 'undefined') ? path.dirname(process.execPath) : __dirname
 // =====================
+
+// --- [新增] 載入環境變數，確保支援 pkg 外部讀取 ---
+require('dotenv').config({ path: path.join(basePath, '.env') })
 
 const app = express()
 
@@ -41,27 +42,33 @@ const hbs = exphbs.create({
   extname: '.hbs',
   defaultLayout: 'main',
   layoutsDir: path.join(basePath, 'src/views/layouts'),
-  helpers: hbsHelpers
+  helpers: hbsHelpers,
+  // 針對某些版本的 HBS，啟用原型存取
+  runtimeOptions: {
+    allowProtoPropertiesByDefault: true,
+    allowProtoMethodsByDefault: true
+  }
 })
 
 app.engine('hbs', hbs.engine)
 app.set('view engine', 'hbs')
 app.set('views', path.join(basePath, 'src/views'))
 
-// 掛載路由
-const saleRoutes = require('./src/routes/saleRoutes')
-const billRoutes = require('./src/routes/billRoutes')
-const vipRoutes = require('./src/routes/vipRoutes')
-const prodRoutes = require('./src/routes/prodRoutes')
-const posDataRoutes = require('./src/routes/posDataRoutes')
-const stOrderRoutes = require('./src/routes/stOrderRoutes')
+// 設定身分 (全域注入)
+const { USERS } = require('./src/config/roles')
+app.use((req, res, next) => {
+  const identity = process.env.MY_SHOP_ID
+  const user = USERS[identity]
+  if (user) {
+    req.currentUser = user
+    res.locals.user = JSON.parse(JSON.stringify(user))
+  }
+  next()
+})
 
-app.use('/sale', saleRoutes)
-app.use('/bill', billRoutes)
-app.use('/vip', vipRoutes)
-app.use('/prod', prodRoutes)
-app.use('/pos', posDataRoutes)
-app.use('/st-order', stOrderRoutes)
+// 掛載路由
+const router = require('./src/routes')
+app.use('/', router)
 
 // 首頁導向商品查詢
 app.get('/', (req, res) => res.redirect('/sale/sale-data'))

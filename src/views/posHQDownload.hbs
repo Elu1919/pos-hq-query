@@ -1,0 +1,276 @@
+<!-- ✅ 頁面標題與提示按鈕 -->
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+       <h2 class="my-3">POS資料下載</h2>
+       <button type="button"
+               class="btn btn-warning"
+               data-bs-toggle="modal"
+               data-bs-target="#hint1">
+              查看操作提示
+       </button>
+</div>
+
+<!-- Modal -->
+<!-- 操作提示 -->
+{{>tips-modal/posHQDownload}}
+
+<!-- 調撥問題單據 -->
+<div class="modal fade"
+     id="no-transfer-modal"
+     tabindex="-1"
+     aria-labelledby="ModalLabel"
+     aria-hidden="true">
+       <div class="modal-dialog modal-xl modal-dialog-scrollable">
+              <div class="modal-content">
+                     <div class="modal-header">
+                            <h5 class="modal-title fw-bold">調撥資料表未抓取單據</h5>
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                     </div>
+                     <div class="modal-body"
+                          id="no-transfer-content">
+                            <!-- 回傳資料 -->
+
+                     </div>
+              </div>
+       </div>
+</div>
+
+<!-- 調撥出庫，入庫「匯入」狀態 -->
+<div class="modal fade"
+     id="inModal"
+     tabindex="-1"
+     aria-labelledby="ModalLabel"
+     aria-hidden="true">
+       <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+              <div class="modal-content">
+                     <div class="modal-header">
+                            <h5 class="modal-title fw-bold">調撥出庫，入庫「匯入」狀態</h5>
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                     </div>
+                     <div class="modal-body"
+                          id="inContent">
+                            <!-- 回傳資料 -->
+                     </div>
+              </div>
+       </div>
+</div>
+
+
+<!-- 下載區 -->
+<!-- 銷售資料 -->
+<div class="card mb-4">
+       <h5 class="card-header bg-dark text-light fw-bold">銷售資料 (匯入ERP)</h5>
+
+       <div class="card-body">
+              <form action="/pos-hq/data/download/sale"
+                    method="POST"
+                    class="d-flex justify-content-between"
+                    id="sale-form">
+
+                     <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold">日期範圍</span>
+                            <input type="date"
+                                   name="SALE_DATE_S"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+                            <p class="me-2 ms-2 pt-1"> ~ </p>
+                            <input type="date"
+                                   name="SALE_DATE_E"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+
+                            <span class="input-group-text fw-bold">銷售門市</span>
+                            {{#each shop}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="SHOP_ID"
+                                   id="sale-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}">
+                            <label class="btn btn-outline-secondary"
+                                   style="width: 45px;"
+                                   for="sale-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
+                            {{/each}}
+
+                            <span class="input-group-text fw-bold">單據類型</span>
+                            {{#each saleType}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TYPE"
+                                   id="{{this.TYPE_ID}}"
+                                   value="{{this.TYPE_ID}}">
+                            <label class="btn btn-outline-secondary"
+                                   for="{{this.TYPE_ID}}"><span class="align-middle">{{this.TYPE_NAME}}</span></label>
+                            {{/each}}
+
+                     </div>
+
+                     <button type="submit"
+                             form="sale-form"
+                             class="btn btn-primary fw-bold"
+                             style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
+                               style="color: rgb(255, 255, 255);"></i></button>
+
+              </form>
+
+       </div>
+</div>
+
+<!-- 調撥出庫、供應商進貨、供應商退貨、總部進貨、總部退貨 -->
+<div class="card mb-4">
+       <h5 class="card-header bg-dark text-light fw-bold">調撥出庫、供應商進退貨、總部進退貨 (匯入ERP)</h5>
+
+       <div class="card-body">
+              <form action="/pos-hq/data/download/transfer"
+                    method="POST"
+                    class="d-flex justify-content-between"
+                    id="transfer-form">
+
+                     <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold">日期範圍</span>
+                            <input type="date"
+                                   name="SALE_DATE_S"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+                            <p class="me-2 ms-2 pt-1"> ~ </p>
+                            <input type="date"
+                                   name="SALE_DATE_E"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+
+                            <span class="input-group-text fw-bold">出庫門市</span>
+                            {{#each shop}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="SHOP_ID"
+                                   id="transfer-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}">
+                            <label class="btn btn-outline-secondary"
+                                   style="width: 45px;"
+                                   for="transfer-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
+                            {{/each}}
+
+                            <span class="input-group-text fw-bold">資料表</span>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="OUT"
+                                   value="OUT">
+                            <label class="btn btn-outline-secondary"
+                                   for="OUT"><span class="align-middle">調撥出庫</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="TAKEIN"
+                                   value="TAKEIN">
+                            <label class="btn btn-outline-secondary"
+                                   for="TAKEIN"><span class="align-middle">供應商進貨</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="TAKEOUT"
+                                   value="TAKEOUT">
+                            <label class="btn btn-outline-secondary"
+                                   for="TAKEOUT"><span class="align-middle">供應商退貨</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="IN"
+                                   value="IN">
+                            <label class="btn btn-outline-secondary"
+                                   for="IN"><span class="align-middle">總部進貨</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="SEND_BACK"
+                                   value="SEND_BACK">
+                            <label class="btn btn-outline-secondary"
+                                   for="SEND_BACK"><span class="align-middle">總部退貨</span></label>
+
+                     </div>
+
+                     <div class="d-flex">
+                            <button id="no-transfer-btn"
+                                    style="width: 120px;"
+                                    class="btn btn-warning mx-2">調撥未抓取</button>
+
+                            <button type="submit"
+                                    form="transfer-form"
+                                    class="btn btn-primary fw-bold"
+                                    style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
+                                      style="color: rgb(255, 255, 255);"></i></button>
+
+                     </div>
+
+
+              </form>
+
+       </div>
+</div>
+
+<!-- 領用 -->
+<div class="card mb-4">
+       <h5 class="card-header bg-dark text-light fw-bold">領用檔 (匯入ERP)</h5>
+
+       <div class="card-body">
+              <form action="/pos-hq/data/download/material"
+                    method="POST"
+                    class="d-flex justify-content-between"
+                    id="material-form">
+
+                     <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold">日期範圍</span>
+                            <input type="date"
+                                   name="SALE_DATE_S"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   value="{{filterIn.SALE_DATE_S}}"
+                                   aria-describedby="basic-addon1">
+                            <p class="me-2 ms-2 pt-1"> ~ </p>
+                            <input type="date"
+                                   name="SALE_DATE_E"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   value="{{filterIn.SALE_DATE_E}}"
+                                   aria-describedby="basic-addon1">
+
+                            <span class="input-group-text fw-bold">領用門市</span>
+                            {{#each shop}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="SHOP_ID"
+                                   id="material-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}"
+                                   {{#if
+                                   this.isCheck}}checked{{/if}}>
+                            <label class="btn btn-outline-secondary"
+                                   style="width: 45px;"
+                                   for="material-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
+                            {{/each}}
+
+                     </div>
+
+                     <button type="submit"
+                             form="material-form"
+                             class="btn btn-primary fw-bold"
+                             style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
+                               style="color: rgb(255, 255, 255);"></i></button>
+
+              </form>
+
+       </div>
+</div>
+
+<script src="/js/posHQDownload.js"></script>

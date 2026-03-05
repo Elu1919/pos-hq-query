@@ -49,5 +49,35 @@ module.exports = {
     return DateTime.fromJSDate(new Date(date))
       .setZone('Asia/Taipei')
       .toFormat('yyyy-MM-dd HH:mm')
+  },
+
+  // --- 權限判斷 ---
+
+  // 功能：大於等於判斷 (專門給 {{#authGte}} 使用)
+  authGte: function (userLevel, requiredLevel, options) {
+    if (Number(userLevel) >= Number(requiredLevel)) {
+      return options.fn(this) // 渲染內部的 HTML
+    }
+    return options.inverse(this) // 渲染 {{else}} 內容
+  },
+
+  // 功能：多重身分包含判斷
+  // 範例：{{#isRoles user.shopId 'B,C,D'}} ... {{/isRoles}}
+  isRoles: function (value, listString, options) {
+    const list = listString.split(',')
+    if (list.includes(String(value))) {
+      return options.fn(this)
+    }
+    return options.inverse(this)
+  },
+
+  // 功能：級別區間判斷 (例如 30~50 之間)
+  authBetween: function (userLevel, min, max, options) {
+    const level = Number(userLevel)
+    if (level >= Number(min) && level <= Number(max)) {
+      return options.fn(this)
+    }
+    return options.inverse(this)
   }
+
 }

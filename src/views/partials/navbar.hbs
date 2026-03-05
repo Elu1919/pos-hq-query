@@ -2,7 +2,7 @@
      style="z-index: 1050;">
   <div class="container-fluid">
     <a class="navbar-brand"
-       href="/sale/sale-data">WJ支援系統-總部</a>
+       href="/">WJ支援系統</a>
     <button class="navbar-toggler"
             type="button"
             data-bs-toggle="collapse"
@@ -13,15 +13,10 @@
     <div class="collapse navbar-collapse"
          id="navbarNav">
       <ul class="navbar-nav me-auto fw-bold">
-
+        {{#authGte user.level 40}}
         <li class="nav-item">
           <a class="nav-link"
              href="/sale/sale-data">銷售單 <i class="fa-solid fa-cash-register"
-               style="color: rgb(204, 204, 204);"></i></a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link"
-             href="/bill">對帳單 <i class="fa-brands fa-cash-app"
                style="color: rgb(204, 204, 204);"></i></a>
         </li>
         <li class="nav-item">
@@ -34,24 +29,47 @@
              href="/prod">商品 <i class="fa-solid fa-cube"
                style="color: rgb(204, 204, 204);"></i></a>
         </li>
+        {{/authGte}}
+        {{#authGte user.level 30}}
         <li class="nav-item">
           <a class="nav-link"
              href="/st-order/order">撥補 <i class="fa-solid fa-truck"
                style="color: rgb(204,204,204);"></i></a>
         </li>
+        {{/authGte}}
+        {{#authGte user.level 40}}
         <li class="nav-item">
           <a class="nav-link"
-             href="/pos/data/download">下載 <i class="fa-solid fa-download"
+             href="/pos-st/data/download">門市下載 <i class="fa-solid fa-download"
                style="color: rgb(204, 204, 204);"></i></a>
         </li>
+        {{/authGte}}
+        {{#authGte user.level 50}}
+        <li class="nav-item">
+          <a class="nav-link"
+             href="/pos-hq/data/download">總部下載 <i class="fa-solid fa-download"
+               style="color: rgb(204, 204, 204);"></i></a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link"
+             href="/bill">對帳單 <i class="fa-brands fa-cash-app"
+               style="color: rgb(204, 204, 204);"></i></a>
+        </li>
+        {{/authGte}}
       </ul>
 
       <ul class="navbar-nav ms-auto">
-        <li class="nav-item">
-          <a class="btn btn-outline-info btn-sm me-2"
+        <li class="nav-item my-auto me-3">
+          <p class="fs-5 text-light fw-bold my-auto">{{user.name}}</p>
+        </li>
+
+        <li class="nav-item me-2">
+          <a class="btn btn-outline-info btn-sm"
              target="_blank"
              href="https://drive.google.com/drive/folders/1viqF_W40ynJa8Buqd2kYn1LwFUOeIr1l?usp=drive_link">POS盤差記錄 </a>
         </li>
+
+
       </ul>
     </div>
   </div>

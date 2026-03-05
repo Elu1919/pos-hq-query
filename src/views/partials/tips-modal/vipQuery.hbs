@@ -1,0 +1,111 @@
+<div class="modal fade"
+     id="hint1"
+     tabindex="-1"
+     aria-labelledby="hintLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"
+            id="hintLabel">操作提示</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        {{>common-notes01}}
+
+        <p>
+          <button class="btn btn-primary"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#ifo-search"
+                  aria-expanded="false"
+                  aria-controls="ifo-search">
+            貴賓資料 查詢 ▼
+          </button>
+        </p>
+        <div class="collapse mb-3"
+             id="ifo-search">
+          <div class="card card-body">
+            <p><span class="fs-6 badge bg-secondary">1</span> 輸入查詢條件，無輸入則查全部</p>
+            <p><span class="fs-6 badge bg-secondary">2</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
+            <p><span class="fs-6 badge bg-info text-black">注意</span> 查詢資料區間越長，花費時間越久</p>
+          </div>
+        </div>
+
+        <p>
+          <button class="btn btn-success"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#ifo-vipExportA4"
+                  aria-expanded="false"
+                  aria-controls="ifo-vipExportA4">
+            匯出 A4條碼簿 ▼
+          </button>
+        </p>
+        <div class="collapse mb-3"
+             id="ifo-vipExportA4">
+          <div class="card card-body">
+            <p><span class="fs-6 badge bg-secondary">1</span> 先執行 <span class="fs-6 badge bg-primary py-2"> 查詢 </span>
+            </p>
+            <p><span class="fs-6 badge bg-secondary">2</span> 按下按鈕 <span class="fs-6 badge bg-success py-2"> 匯出 A4條碼簿
+              </span>，會將查詢結果帶入</p>
+            <p><span class="fs-6 badge bg-secondary">3</span> 可勾選欲列印的項目，預設「全選」，可透過按鈕「全部取消」</p>
+            <p><span class="fs-6 badge bg-secondary">4</span> 編輯完畢後，按下按鈕［送出］，即可匯出 A4條碼簿</p>
+            <p><span class="fs-6 badge bg-secondary">5</span> 按下送出後，需要等幾秒鐘讓報表生成，會在新分頁開啟</p>
+            <p><span class="fs-6 badge bg-danger">限制</span> 匯出最多一次900筆資料，避免資料處理過久</p>
+          </div>
+        </div>
+
+        <p>
+          <button class="btn btn-success"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#ifo-vipExportBarcode"
+                  aria-expanded="false"
+                  aria-controls="ifo-vipExportBarcode">
+            匯出 標籤貼 ▼
+          </button>
+        </p>
+        <div class="collapse mb-3"
+             id="ifo-vipExportBarcode">
+          <div class="card card-body">
+            <p><span class="fs-6 badge bg-secondary">1</span> 先執行 <span class="fs-6 badge bg-primary py-2"> 查詢 </span>
+            </p>
+            <p><span class="fs-6 badge bg-secondary">2</span> 按下按鈕 <span class="fs-6 badge bg-success py-2"> 匯出 標籤貼
+              </span>，會將查詢結果帶入</p>
+            <p><span class="fs-6 badge bg-secondary">3</span> 可勾選欲列印的項目，預設「全選」，可透過按鈕「全部取消」</p>
+            <p><span class="fs-6 badge bg-secondary">4</span> 可微調標籤貼輸出數量（不可為0）</p>
+            <p><span class="fs-6 badge bg-secondary">5</span> 編輯完畢後，按下按鈕［送出］，即可匯出 條碼貼</p>
+            <p><span class="fs-6 badge bg-secondary">6</span> 按下送出後，需要等幾秒鐘讓報表生成，會在新分頁開啟</p>
+            <p><span class="fs-6 badge bg-danger">限制</span> 匯出最多一次900筆資料，避免資料處理過久</p </div>
+          </div>
+        </div>
+
+        {{#authGte user.level 50}}
+        <p>
+          <button class="btn btn-success"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#ifo-vipQty"
+                  aria-expanded="false"
+                  aria-controls="ifo-vipQty">
+            數量總覽 ▼
+          </button>
+        </p>
+        <div class="collapse mb-3"
+             id="ifo-vipQty">
+          <div class="card card-body">
+            <p><span class="fs-6 badge bg-secondary">1</span> 可觀看總部已開貴賓額度：「已使用」「未使用」和「總數量」</p>
+          </div>
+        </div>
+        {{/authGte}}
+
+        {{>common-notes02}}
+      </div>
+
+    </div>
+  </div>
+</div>

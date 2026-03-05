@@ -8,7 +8,12 @@ const { validateDateRange } = require('../utils/formUtils')
 const saleController = {
   showSaleDetailsPage: async (req, res) => {
     try {
-      const lists = await shopData.getShopList
+      const shop = await shopData.getShopList()
+      const saleType = await saleData.getSaleTypeList()
+      const lists = {}
+      lists.shop = Object.values(shop)
+      lists.saleType = Object.values(saleType)
+
       res.render('saleQuery', { lists })
     } catch (err) {
       res.status(500).send('資料取得失敗')

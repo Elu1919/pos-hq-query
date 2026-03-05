@@ -11,37 +11,7 @@
 </div>
 
 <!-- ✅ 操作提示 Modal -->
-<div class="modal fade"
-     id="hint1"
-     tabindex="-1"
-     aria-labelledby="hintLabel"
-     aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold"
-            id="hintLabel">操作提示</h5>
-        <button type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="關閉"></button>
-      </div>
-      <div class="modal-body">
-        <p><span class="fs-6 badge bg-warning text-dark">1</span> 輸入查詢條件，無輸入資料為全選</p>
-        <p><span class="fs-6 badge bg-warning text-dark">2</span>
-          </br><b>帳款月份：</b>
-          </br>2025年9月輸入"202509"
-          </br>2025年12月輸入"202512"...以此類推</p>
-        <p><span class="fs-6 badge bg-warning text-dark">3</span> 按下「Enter」或藍色「查詢」鍵，可進行資料篩選與查詢</p>
-        <p>－－－－－－－－－－－－－－－－－－－－－－－－－－－－－</p>
-        <p><span class="fs-6 badge bg-info text-dark">注意</span>
-          </br>對帳單下載，需等待伺服器處理回應才會下載到電腦
-          </br>一次下載很多個檔案，需要等比較久</p>
-        <p><span class="fs-6 badge bg-info text-dark">注意</span> 安全設定關係，本系統只有在麻豆總部網域可以進行查詢</p>
-      </div>
-    </div>
-  </div>
-</div>
+{{>tips-modal/billQuery}}
 
 <!-- ✅ 固定頂部的控制列 -->
 <div class="bg-light sticky-top py-3"
