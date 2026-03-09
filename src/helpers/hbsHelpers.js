@@ -45,20 +45,31 @@ module.exports = {
 
   formatDate: (date) => {
     if (!date) return ''
-    // 統一使用 Luxon 處理台北時區，格式為 yyyy-MM-dd HH:mm
-    return DateTime.fromJSDate(new Date(date))
-      .setZone('Asia/Taipei')
-      .toFormat('yyyy-MM-dd HH:mm')
+    // 讓 Luxon 自動判斷是 ISO 字串還是 JS Date
+    const dt = (typeof date === 'string')
+      ? DateTime.fromISO(date)
+      : DateTime.fromJSDate(new Date(date))
+
+    return dt.setZone('Asia/Taipei').toFormat('yyyy-MM-dd HH:mm')
   },
 
   // --- 權限判斷 ---
 
   // 功能：大於等於判斷 (專門給 {{#authGte}} 使用)
   authGte: function (userLevel, requiredLevel, options) {
-    if (Number(userLevel) >= Number(requiredLevel)) {
-      return options.fn(this) // 渲染內部的 HTML
+    const uLevel = Number(userLevel)
+    const rLevel = Number(requiredLevel)
+
+    // 特別處理：如果要求的是 WH (30) 權限，但使用者是 ST (40)，則隱藏按鈕
+    // 假設 ROLES.ST = 40, ROLES.WH = 30
+    if (rLevel === 30 && uLevel === 40) {
+      return options.inverse(this)
     }
-    return options.inverse(this) // 渲染 {{else}} 內容
+
+    if (uLevel >= rLevel) {
+      return options.fn(this)
+    }
+    return options.inverse(this)
   },
 
   // 功能：多重身分包含判斷

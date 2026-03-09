@@ -40,17 +40,33 @@
                                    aria-describedby="basic-addon1">
 
                             <span class="input-group-text fw-bold">銷售門市</span>
+                            {{#isRoles user.level "40"}}
+                            <input class="btn-check pe-none"
+                                   type="checkbox"
+                                   name="SHOP_ID"
+                                   id="{{user.shopId}}"
+                                   value="{{user.shopId}}"
+                                   checked
+                                   tabindex="-1">
+                            <label class="btn btn-outline-secondary opacity-75"
+                                   style="width:45px; cursor: default;"
+                                   for="{{user.shopId}}">
+                                   <span class="align-middle">{{user.shopId}}</span>
+                            </label>
+                            {{else}}
                             {{#each shop}}
                             <input class="btn-check"
                                    type="checkbox"
                                    name="SHOP_ID"
-                                   id="sale-{{this.SHOP_ID}}"
-                                   value="{{this.SHOP_ID}}">
+                                   id="{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}"
+                                   {{#if
+                                   this.isCheck}}checked{{/if}}>
                             <label class="btn btn-outline-secondary"
-                                   style="width: 45px;"
-                                   for="sale-{{this.SHOP_ID}}"><span
-                                         class="align-middle">{{this.SHOP_ID}}</span></label>
+                                   style="width:45px;"
+                                   for="{{this.SHOP_ID}}"><span class="align-middle">{{this.SHOP_ID}}</span></label>
                             {{/each}}
+                            {{/isRoles}}
 
                             <span class="input-group-text fw-bold">貴賓群組</span>
                             {{#each vipGrp}}
