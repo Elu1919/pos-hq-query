@@ -585,6 +585,96 @@ const downloadModel = {
             console.error('總部出貨資料取得失敗：', err)
             throw err
         }
+    },
+    posStPerformance: async (filterIn) => {
+        try {
+            const pool = await poolPromise
+
+            // 變數初始化與前端帶入值處理
+            const sDate = (filterIn.SALE_DATE_S || '').toString()
+            const eDate = (filterIn.SALE_DATE_E || '').toString()
+
+            const shopIds = Array.isArray(filterIn.SHOP_ID)
+                ? filterIn.SHOP_ID.join(',')
+                : (filterIn.SHOP_ID || '').toString()
+
+            const vipGrp = Array.isArray(filterIn.VIP_GRP)
+                ? filterIn.VIP_GRP.join(',')
+                : (filterIn.VIP_GRP || '').toString()
+
+            const result = await pool.request()
+                .input('S_DATE_VAL', sDate)
+                .input('E_DATE_VAL', eDate)
+                .input('SHOP_IDS_VAL', shopIds)
+                .input('VIP_GRP_VAL', vipGrp)
+                .query(`
+        /* 1. 日期與 XML 處理 */
+        DECLARE @S_DT NVARCHAR(10) = @S_DATE_VAL
+        DECLARE @E_DT NVARCHAR(10) = @E_DATE_VAL
+        DECLARE @S_IDS NVARCHAR(MAX) = @SHOP_IDS_VAL
+        DECLARE @V_IDS NVARCHAR(MAX) = @VIP_GRP_VAL
+
+        DECLARE @S_DATE DATE = CASE WHEN ISDATE(@S_DT) = 1 THEN CAST(@S_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+        DECLARE @E_DATE DATE = CASE WHEN ISDATE(@E_DT) = 1 THEN CAST(@E_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+
+        DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(@S_IDS, ',', '</v><v>') + '</v></r>' AS XML)
+        DECLARE @VipXml XML = CAST('<r><v>' + REPLACE(@V_IDS, ',', '</v><v>') + '</v></r>' AS XML)
+
+        /* 2. 主查詢 */
+        SELECT 
+            S1.SHOP_ID,
+            SH.SHOP_NAME,
+            REPLACE(CONVERT(VARCHAR(8), S1.order_time, 11), '/', '-') AS SALE_DATE,
+            S0.vipgrp_id AS VIPGRP_ID,
+            VG.vipgrp_name AS VIPGRP_NAME,
+            V.NAME AS VIP_NAME,
+            CASE S0.TYPE
+                WHEN '0' THEN N'銷貨單'
+                WHEN '1' THEN N'銷退單'
+                WHEN '2' THEN N'被退單'
+                ELSE N'未設定的「' + CAST(ISNULL(S0.TYPE, '') AS NVARCHAR(MAX)) + N'」，請通知系統管理員'
+            END AS TYPE,
+            S1.SALE_ID,
+            P.PROD_NAME1,
+            S1.QTY,
+            U.UNIT_NAME AS UNIT,
+            S1.TASTE_MEMO,
+            S1.SALE_PRICE,
+            ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0) AS DISC,
+            (S1.SALE_PRICE * S1.QTY) + (ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0)) AS TOTAL,
+            CASE 
+                WHEN ISNULL(S1.FREE_MEMO, '') <> '' AND ISNULL(S0.spec_memo, '') <> '' 
+                    THEN LTRIM(RTRIM(S1.FREE_MEMO)) + CHAR(13) + CHAR(10) + LTRIM(RTRIM(S0.spec_memo))
+                ELSE ISNULL(NULLIF(LTRIM(RTRIM(S1.FREE_MEMO)), ''), ISNULL(LTRIM(RTRIM(S0.spec_memo)), ''))
+            END AS MEMO,
+            PAY.PAY_ID,
+            PAY.PAY_NAME AS PAY_NAEM,
+            CASE WHEN ISNULL(S1.invo_no, '') = '' THEN 'X' ELSE 'O' END AS INV
+        FROM SALE01 S1
+        INNER JOIN SALE00 S0 ON S1.SHOP_ID = S0.SHOP_ID AND S1.SALE_ID = S0.SALE_ID
+        LEFT JOIN SHOP00 SH ON S1.SHOP_ID = SH.SHOP_ID
+        LEFT JOIN VIP00 V ON S0.VIP_ID = V.VIP_ID
+        LEFT JOIN vip_group00 VG ON S0.vipgrp_id = VG.vipgrp_id
+        LEFT JOIN PRODUCT00 P ON S1.PROD_ID = P.PROD_ID
+        LEFT JOIN UNIT U ON P.UNIT = U.UNIT_ID
+        OUTER APPLY (
+            SELECT TOP 1 S2.PAY_ID, PM.PAY_NAME 
+            FROM SALE02 S2
+            LEFT JOIN PAYMENT PM ON S2.PAY_ID = PM.PAY_ID
+            WHERE S2.SHOP_ID = S1.SHOP_ID AND S2.SALE_ID = S1.SALE_ID
+        ) PAY
+        WHERE S0.STATUS = '2'
+          AND S1.SHOP_ID NOT IN ('A', 'TEST01')
+          AND (CAST(S1.order_time AS DATE) >= @S_DATE AND CAST(S1.order_time AS DATE) <= @E_DATE)
+          AND (@S_IDS = '' OR S1.SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
+          AND (@V_IDS = '' OR S0.vipgrp_id IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @VipXml.nodes('/r/v') AS t(v)))
+        ORDER BY S1.SHOP_ID ASC, S0.vipgrp_id ASC, PAY.PAY_ID ASC, S1.SALE_ID DESC
+      `)
+            return result.recordset
+        } catch (err) {
+            console.error('銷貨績效資料取得失敗：', err)
+            throw err
+        }
     }
 }
 

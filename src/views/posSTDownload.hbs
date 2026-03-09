@@ -1,0 +1,78 @@
+<!-- ✅ 頁面標題與提示按鈕 -->
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+       <h2 class="my-3">POS資料下載</h2>
+       <button type="button"
+               class="btn btn-warning"
+               data-bs-toggle="modal"
+               data-bs-target="#hint1">
+              查看操作提示
+       </button>
+</div>
+
+<!-- Modal -->
+<!-- 操作提示 -->
+{{>tips-modal/posSTDownload}}
+
+<!-- 下載區 -->
+<!-- 銷售資料 -->
+<div class="card mb-4">
+       <h5 class="card-header bg-dark text-light fw-bold">門市業績表</h5>
+
+       <div class="card-body">
+              <form action="/pos-st/data/download/performance"
+                    method="POST"
+                    class="d-flex justify-content-between"
+                    id="performance-form">
+
+                     <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold">日期範圍</span>
+                            <input type="date"
+                                   name="SALE_DATE_S"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+                            <p class="me-2 ms-2 pt-1"> ~ </p>
+                            <input type="date"
+                                   name="SALE_DATE_E"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+
+                            <span class="input-group-text fw-bold">銷售門市</span>
+                            {{#each shop}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="SHOP_ID"
+                                   id="sale-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}">
+                            <label class="btn btn-outline-secondary"
+                                   style="width: 45px;"
+                                   for="sale-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
+                            {{/each}}
+
+                            <span class="input-group-text fw-bold">貴賓群組</span>
+                            {{#each vipGrp}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="VIP_GRP"
+                                   id="{{this.vipgrp_id}}"
+                                   value="{{this.vipgrp_id}}">
+                            <label class="btn btn-outline-secondary"
+                                   for="{{this.vipgrp_id}}"><span
+                                         class="align-middle">{{this.vipgrp_name}}</span></label>
+                            {{/each}}
+
+                     </div>
+
+                     <button type="submit"
+                             form="performance-form"
+                             class="btn btn-primary fw-bold"
+                             style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
+                               style="color: rgb(255, 255, 255);"></i></button>
+
+              </form>
+
+       </div>
+</div>

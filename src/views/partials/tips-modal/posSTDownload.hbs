@@ -1,0 +1,64 @@
+<div class="modal fade"
+     id="hint1"
+     tabindex="-1"
+     aria-labelledby="hintLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"
+            id="hintLabel">操作提示 (點開按鈕看說明)</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="關閉"></button>
+      </div>
+      <div class="modal-body">
+        {{>common-notes01}}
+        <p>
+          <button class="btn btn-success"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#ifo-performance"
+                  aria-expanded="false"
+                  aria-controls="ifo-performance">
+            門市業績表 ▼
+          </button>
+        </p>
+        <div class="collapse mb-3"
+             id="ifo-performance">
+          <div class="card card-body">
+            <div class="alert alert-secondary"
+                 role="alert">
+              <p class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation"
+                   style="color: rgb(75, 75, 75);"></i> 僅會抓取「核准」單據</p>
+              <p class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation"
+                   style="color: rgb(75, 75, 75);"></i> 無輸入貴賓資料之單據，一律歸類為門市客</p>
+              <p class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation"
+                   style="color: rgb(75, 75, 75);"></i> 將依照「貴賓群組」計算業績</p>
+              <p class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation"
+                   style="color: rgb(75, 75, 75);"></i> 請務必依照SOP流程新增門市客以外的貴賓資料，避免設定造成單據資料需要手動修改</p>
+
+              <p class="fw-bold mb-0"><i class="fa-solid fa-triangle-exclamation"
+                   style="color: rgb(75, 75, 75);"></i> 「店自用」請使用【領用】功能key單!!</p>
+            </div>
+            <p><span class="fs-6 badge bg-primary">步驟說明</span></p>
+            <p><span class="fs-6 badge bg-secondary">1</span> 請選擇 [日期範圍]，無輸入則只抓當天資料</p>
+            <p><span class="fs-6 badge bg-secondary">2</span> 請選擇 [銷售門市]，無輸入則抓取全部門市資料</p>
+            <p><span class="fs-6 badge bg-secondary">3</span> 請選擇 [貴賓群組]，無輸入則抓取全部單據資料</p>
+            <p><span class="fs-6 badge bg-secondary">4</span> 選擇完畢後，按下按鈕［下載］，即可下載ERP匯入檔案 </p>
+            <hr>
+            <p><span class="fs-6 badge bg-primary">金額欄位說明</span></p>
+            <p><span class="fs-6 badge bg-secondary">單價</span> 商品售出價格</p>
+            <p><span class="fs-6 badge bg-secondary">加值</span> 會顯示加值名稱，如：保養廠、機車行</p>
+            <p><span class="fs-6 badge bg-secondary">總折讓</span> 單品項總折讓 (包含 單品項折扣 與 整單折扣) </p>
+            <p><span class="fs-6 badge bg-secondary">小計(稅前價)</span> 單價 × 數量 + 總折讓</p>
+
+          </div>
+        </div>
+
+        {{>common-notes02}}
+      </div>
+    </div>
+  </div>
+</div>

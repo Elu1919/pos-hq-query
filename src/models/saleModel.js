@@ -18,31 +18,11 @@ const markCheckStatus = (list, selectedValues, idField) => {
   })
 }
 
-async function getLists() {
-  try {
-    const [shop, vip, vipgrp, pay, saleType, prod, dep] = await Promise.all([
-      shopData.getShopList(),
-      vipData.getVipList(),
-      vipData.getVipGrpList(),
-      saleData.getPayList(),
-      saleData.getSaleTypeList(),
-      prodData.getProdList(),
-      prodData.getDepList(),
-    ])
-
-    return { saleType, shop, vip, vipgrp, pay, prod, dep }
-
-  } catch (err) {
-    console.error('❌ 抓取清單資料失敗：', err)
-    throw err
-  }
-}
-
 const saleData = {
   getAllSaleData: async (filterIn) => {
     try {
       const pool = await poolPromise
-      const lists = await getLists()
+      const lists = await saleData.getLists()
 
       // 1. 參數標準化處理
       const sDate = (filterIn.SALE_DATE_S || '').toString()
@@ -102,7 +82,7 @@ const saleData = {
           LEFT JOIN SALE02 S2 ON S0.SHOP_ID = S2.SHOP_ID AND S0.SALE_ID = S2.SALE_ID 
           LEFT JOIN PAYMENT PAY ON S2.PAY_ID = PAY.PAY_ID 
           WHERE S0.STATUS = '2' 
-          AND S0.SHOP_ID NOT IN ('A', 'TEST01')
+          --AND S0.SHOP_ID NOT IN ('A', 'TEST01')
 
           /* 過濾條件區 (與原邏輯完全一致) */
           AND (S0.SALE_DATE >= @S_DATE AND S0.SALE_DATE < DATEADD(DAY, 1, @E_DATE))
@@ -237,6 +217,26 @@ const saleData = {
       throw err
     }
   },
+
+  getLists: async () => {
+    try {
+      const [shop, vip, vipgrp, pay, saleType, prod, dep] = await Promise.all([
+        shopData.getShopList(),
+        vipData.getVipList(),
+        vipData.getVipGrpList(),
+        saleData.getPayList(),
+        saleData.getSaleTypeList(),
+        prodData.getProdList(),
+        prodData.getDepList(),
+      ])
+
+      return { saleType, shop, vip, vipgrp, pay, prod, dep }
+
+    } catch (err) {
+      console.error('❌ 抓取清單資料失敗：', err)
+      throw err
+    }
+  }
 }
 
 module.exports = saleData
