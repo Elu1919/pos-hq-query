@@ -62,13 +62,13 @@
         <li class="nav-item my-auto me-3">
           <p class="fs-5 text-light fw-bold my-auto">{{user.name}}</p>
         </li>
-
+        {{#authGte user.level 50}}
         <li class="nav-item me-2">
           <a class="btn btn-outline-info btn-sm"
              target="_blank"
              href="https://drive.google.com/drive/folders/1viqF_W40ynJa8Buqd2kYn1LwFUOeIr1l?usp=drive_link">POS盤差記錄 </a>
         </li>
-
+        {{/authGte}}
 
       </ul>
     </div>

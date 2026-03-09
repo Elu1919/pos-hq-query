@@ -28,6 +28,6 @@ router.use('/bill', checkAuth(ROLES.ACC), billRoutes)
 router.use('/pos-hq', checkAuth(ROLES.ACC), posHQDownloadRoutes)
 
 
-router.get('/', checkAuth(ROLES.WH), homeController.homeRedirect)
+router.get('/', homeController.homeRedirect)
 
 module.exports = router

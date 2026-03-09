@@ -1,8 +1,5 @@
 // src/controller/homeController.js
 
-const saleData = require('../models/saleModel')
-const shopData = require('../models/shopModel')
-
 const homeController = {
   homeRedirect: async (req, res) => {
     try {
