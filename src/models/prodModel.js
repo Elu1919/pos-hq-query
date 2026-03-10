@@ -192,36 +192,51 @@ const prodData = {
 
   getExportData: async (prodIds) => {
     try {
+      // 1. 強力清理：確保 ID 陣列是純粹的字串，且去除空白與重複
+      const cleanIds = [...new Set(
+        (Array.isArray(prodIds) ? prodIds : [])
+          .map(id => String(id || '').trim())
+          .filter(id => id.length > 0)
+      )]
+
+      // 如果沒有 ID，直接回傳空陣列，避免產生 IN () 的錯誤語法
+      if (cleanIds.length === 0) return []
+
       const pool = await poolPromise
       const request = pool.request()
 
-      const inClause = prodIds.map((id, index) => {
-        const varName = `prod${index}`
+      // 2. 建立參數化查詢
+      const inClause = cleanIds.map((id, index) => {
+        const varName = `p${index}`
+        // 依然使用參數化查詢來保證安全，但不顯式指定 sql.NVarChar
         request.input(varName, id)
         return `@${varName}`
       }).join(',')
 
-      const result = await request.query(`
-        SELECT
-          T1.PROD_ID,       -- 產品編號
-          T1.PROD_NAME1,    -- 【產品名稱1 (作為備援名稱)
-          T1.PROD_NAME2,    -- 產品名稱2 (主要長名稱)
-          T2.DEP_NAME       -- 部門名稱 (類別)
-        FROM
-          PRODUCT00 AS T1
-        INNER JOIN
-          DEPARTMENT AS T2
-        ON
-          T1.DEP_ID = T2.DEP_ID 
-        WHERE
-          T1.PROD_ID IN (${inClause}) 
-      `)
-
+      // 3. 加上 WITH (NOLOCK) 並優化 SQL 格式
+      // 在 WHERE 條件前增加空格，並確保查詢語法在 2008 上絕對相容
+      const query = `
+      SELECT
+        T1.PROD_ID,
+        T1.PROD_NAME1,
+        T1.PROD_NAME2,
+        T2.DEP_NAME
+      FROM
+        dbo.PRODUCT00 AS T1 WITH (NOLOCK)
+      INNER JOIN
+        dbo.DEPARTMENT AS T2 WITH (NOLOCK)
+      ON
+        T1.DEP_ID = T2.DEP_ID
+      WHERE
+        T1.PROD_ID IN (${inClause})
+    `
+      const result = await request.query(query)
       return result.recordset
 
     } catch (err) {
-      console.error('資料取得失敗：', err)
-      throw err // 重新拋出錯誤，讓呼叫方處理
+      // 門市端出錯時，印出更精準的錯誤訊息
+      console.error('SQL 執行錯誤:', err.message)
+      throw err
     }
   },
 

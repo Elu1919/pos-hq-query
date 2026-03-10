@@ -201,6 +201,9 @@ const posDataController = {
       const ws = wb.addWorksheet('門市業績表')
       ws.pageSetup.paperSize = 9
       ws.pageSetup.orientation = 'landscape'
+      ws.pageSetup.fitToPage = true
+      ws.pageSetup.fitToWidth = 1
+      ws.pageSetup.fitToHeight = 0
       ws.pageSetup.margins = {
         top: CONFIG.MARGIN_TOP / CONFIG.INCH_TO_CM, bottom: CONFIG.MARGIN_BOTTOM / CONFIG.INCH_TO_CM,
         left: CONFIG.MARGIN_LEFT / CONFIG.INCH_TO_CM, right: CONFIG.MARGIN_RIGHT / CONFIG.INCH_TO_CM,
