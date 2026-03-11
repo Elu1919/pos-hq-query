@@ -12,10 +12,12 @@ const vipRoutes = require('./vipRoutes')
 const prodRoutes = require('./prodRoutes')
 const posHQDownloadRoutes = require('./posHQDownload')
 const posSTDownloadRoutes = require('./posSTDownload')
+const posWHDownloadRoutes = require('./posWHDownload')
 const stOrderRoutes = require('./stOrderRoutes')
 
 // user.level 30
 router.use('/st-order', checkAuth(ROLES.WH), stOrderRoutes)
+router.use('/pos-wh', checkAuth(ROLES.WH), posWHDownloadRoutes)
 
 // user.level 40
 router.use('/sale', checkAuth(ROLES.ST), saleRoutes)

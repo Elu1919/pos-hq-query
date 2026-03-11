@@ -75,8 +75,13 @@ const exportToExcel = async (res, data, fileName, sheetName = 'Sheet1') => {
   data.forEach(item => sheet.addRow(Object.values(item)))
 
   // 檔案暫存與下載
-  const tempDir = path.join(__dirname, '../../public/temp')
-  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
+  const tempDir = path.join(process.cwd(), 'temp')
+
+  // 檢查並建立實體資料夾，pkg 允許在 process.cwd() 下建立目錄
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true })
+  }
+
   const filePath = path.join(tempDir, fileName)
 
   await workbook.xlsx.writeFile(filePath)
