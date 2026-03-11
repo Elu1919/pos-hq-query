@@ -24,7 +24,6 @@ const downloadModel = {
                 .input('SHOP_IDS_VAL', shopIds)
                 .input('TYPE_VAL', types)
                 .query(`
-        /* 1. 變數初始化與日期處理 */
         DECLARE @S_DT NVARCHAR(10) = @S_DATE_VAL
         DECLARE @E_DT NVARCHAR(10) = @E_DATE_VAL
         DECLARE @S_IDS NVARCHAR(MAX) = @SHOP_IDS_VAL
@@ -36,7 +35,6 @@ const downloadModel = {
         DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(CAST(@S_IDS AS NVARCHAR(MAX)), ',', '</v><v>') + '</v></r>' AS XML)
         DECLARE @TypeXml XML = CAST('<r><v>' + REPLACE(CAST(@T_IDS AS NVARCHAR(MAX)), ',', '</v><v>') + '</v></r>' AS XML)
 
-        /* 2. 主查詢邏輯 */
         SELECT
             日期,
             DENSE_RANK() OVER (
@@ -121,6 +119,7 @@ const downloadModel = {
                 END AS NVARCHAR(MAX)) AS 類型,
 
                 S1.SALE_ID AS POS單號,
+                S1.SALE_SNO,
                 COALESCE(NULLIF(LTRIM(RTRIM(V.TELEPHONE)), ''), NULLIF(LTRIM(RTRIM(V.MOBILE)), ''), '') AS 貴賓電話,
                 
                 CAST(
@@ -133,10 +132,8 @@ const downloadModel = {
                 S1.QTY AS 數量,
                 S1.TASTE_MEMO AS 加值,
                 S1.SALE_PRICE AS 單價,
-                /* 關鍵修正：總折讓 = ITEM_DISC + itemdisc_total */
                 ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0) AS 總折讓,
-                /* 小計同步修正：(單價 * 數量) + 總折讓 (注意折讓通常為負數) */
-                (S1.SALE_PRICE * S1.QTY) + (ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0)) AS [小計(稅前價)],
+                (S1.SALE_PRICE * S1.QTY) + ISNULL(S1.ITEM_DISC, 0) AS [小計(稅前價)],
                 
                 S1.FREE_MEMO AS 招待備註,
                 S1.invo_no AS 發票號碼,
@@ -169,7 +166,13 @@ const downloadModel = {
         AND (@S_IDS = '' OR RAW_SHOP IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
         AND (@T_IDS = '' OR RAW_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @TypeXml.nodes('/r/v') AS t(v)))
         
-        ORDER BY 序號 ASC
+        ORDER BY 
+            日期 DESC, 
+            [客戶/供應商編碼] ASC, 
+            發貨倉庫 ASC, 
+            交易類型 ASC, 
+            POS單號 ASC, 
+            SALE_SNO ASC
       `)
             return result.recordset
         } catch (err) {
