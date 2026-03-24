@@ -132,8 +132,8 @@ const downloadModel = {
                 S1.QTY AS 數量,
                 S1.TASTE_MEMO AS 加值,
                 S1.SALE_PRICE AS 單價,
-                ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0) AS 總折讓,
-                (S1.SALE_PRICE * S1.QTY) + ISNULL(S1.ITEM_DISC, 0) AS [小計(稅前價)],
+               ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0) AS 總折讓,
+               (S1.SALE_PRICE * S1.QTY) + ISNULL(S1.ITEM_DISC, 0) + ISNULL(S1.itemdisc_total, 0) AS [小計(稅前價)],
                 
                 S1.FREE_MEMO AS 招待備註,
                 S1.invo_no AS 發票號碼,
