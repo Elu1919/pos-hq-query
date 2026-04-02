@@ -620,6 +620,7 @@ const downloadModel = {
         DECLARE @S_DATE DATE = CASE WHEN ISDATE(@S_DT) = 1 THEN CAST(@S_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
         DECLARE @E_DATE DATE = CASE WHEN ISDATE(@E_DT) = 1 THEN CAST(@E_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
 
+        -- 預先處理 XML，避免在 WHERE 中重複計算
         DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(@S_IDS, ',', '</v><v>') + '</v></r>' AS XML)
         DECLARE @VipXml XML = CAST('<r><v>' + REPLACE(@V_IDS, ',', '</v><v>') + '</v></r>' AS XML)
 
@@ -628,14 +629,14 @@ const downloadModel = {
             S1.SHOP_ID,
             SH.SHOP_NAME,
             REPLACE(CONVERT(VARCHAR(8), S1.order_time, 11), '/', '-') AS SALE_DATE,
-            S0.vipgrp_id AS VIPGRP_ID,
-            VG.vipgrp_name AS VIPGRP_NAME,
-            V.NAME AS VIP_NAME,
+            ISNULL(S0.vipgrp_id, '') AS VIPGRP_ID,  -- 補上 ISNULL，讓報表顯示空字串而非空白
+            ISNULL(VG.vipgrp_name, N'一般散客') AS VIPGRP_NAME, -- 讓散客有明確名稱
+            ISNULL(V.NAME, N'無輸入交易對象') AS VIP_NAME,
             CASE S0.TYPE
                 WHEN '0' THEN N'銷貨單'
                 WHEN '1' THEN N'銷退單'
                 WHEN '2' THEN N'被退單'
-                ELSE N'未設定的「' + CAST(ISNULL(S0.TYPE, '') AS NVARCHAR(MAX)) + N'」，請通知系統管理員'
+                ELSE N'未設定'
             END AS TYPE,
             S1.SALE_ID,
             P.PROD_NAME1,
@@ -667,10 +668,19 @@ const downloadModel = {
             WHERE S2.SHOP_ID = S1.SHOP_ID AND S2.SALE_ID = S1.SALE_ID
         ) PAY
         WHERE S0.STATUS = '2'
-          AND S1.SHOP_ID NOT IN ('A', 'TEST01')
-          AND (CAST(S1.order_time AS DATE) >= @S_DATE AND CAST(S1.order_time AS DATE) <= @E_DATE)
-          AND (@S_IDS = '' OR S1.SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
-          AND (@V_IDS = '' OR S0.vipgrp_id IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @VipXml.nodes('/r/v') AS t(v)))
+        AND S1.SHOP_ID NOT IN ('A', 'TEST01')
+        AND (CAST(S1.order_time AS DATE) >= @S_DATE AND CAST(S1.order_time AS DATE) <= @E_DATE)
+        
+        -- 門市篩選：支援多選，且當 @S_IDS 為空時抓取全部
+        AND (@S_IDS = '' OR S1.SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
+        
+        -- 貴賓群組篩選：【修正重點】
+        AND (
+            @V_IDS = '' -- 如果前端沒選群組，這條會成立，直接放行所有資料（包含 NULL）
+            OR 
+            ISNULL(S0.vipgrp_id, '') IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @VipXml.nodes('/r/v') AS t(v))
+        )
+
         ORDER BY S1.SHOP_ID ASC, S0.vipgrp_id ASC, PAY.PAY_ID ASC, S1.SALE_ID DESC
       `)
             return result.recordset

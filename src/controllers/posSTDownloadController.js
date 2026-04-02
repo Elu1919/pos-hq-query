@@ -23,8 +23,8 @@ const posDataController = {
   downloadPerformanceData: async (req, res) => {
     const CONFIG = {
       DEFAULT_FONT: '微軟正黑體',
-      ROW_HEIGHT_DEF: 22,    // 標準列高 (約 0.77cm)
-      ROW_HEIGHT_STAT: 17,   // 統計表列高 (約 0.6cm)
+      ROW_HEIGHT_DEF: 22,
+      ROW_HEIGHT_STAT: 17,
       UNIT_CONVERSION: 5.5,
       INCH_TO_CM: 2.54,
       COLOR_BLACK: 'FF000000',
@@ -87,6 +87,7 @@ const posDataController = {
       { start: 8, end: 14, label: '品項' }
     ]
 
+    // --- 輔助工具函數 ---
     const calculateLines = (text, targetCm) => {
       if (!text) return 1
       const lines = text.toString().split('\n')
@@ -125,18 +126,13 @@ const posDataController = {
       }
     }
 
-    // 修正：處理第一列資訊欄位的對齊與換行
     const setInfoRowStyle = (row) => {
       row.height = CONFIG.ROW_HEIGHT_DEF
-      // 銷貨門市標籤
       row.getCell(1).value = '銷貨門市:'
       row.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', wrapText: false }
-      // 門市名稱
       row.getCell(2).alignment = { vertical: 'middle', horizontal: 'left', wrapText: false }
-      // 業績日期標籤
       row.getCell(7).value = '業績日期:'
       row.getCell(7).alignment = { vertical: 'middle', horizontal: 'right', wrapText: false }
-      // 日期範圍
       row.getCell(8).alignment = { vertical: 'middle', horizontal: 'left', wrapText: false }
     }
 
@@ -169,6 +165,7 @@ const posDataController = {
       return headRowIdx + 1
     }
 
+    // --- 對照配置 ---
     const PAY_MAPPING = [
       { name: '現金', rowOffset: 2, payIds: ['1'] },
       { name: '信用卡', rowOffset: 3, payIds: ['4', '5'] },
@@ -178,13 +175,18 @@ const posDataController = {
     ]
 
     const GRP_MAPPING = [
-      { id: 'CUST01', col: 2 }, { id: 'CR0001', col: 4 }, { id: 'CRM001', col: 6 },
-      { id: 'SALE01', col: 8 }, { id: 'B2B001', col: 10 }
+      { id: 'CUST01', col: 2, isDefault: true }, // 標記門市客為預設分類
+      { id: 'CR0001', col: 4 },
+      { id: 'CRM001', col: 6 },
+      { id: 'SALE01', col: 8 },
+      { id: 'B2B001', col: 10 }
     ]
 
     const GROUP_CONFIGS = [
-      { id: 'CR0001', label: '保養廠' }, { id: 'CRM001', label: '機車行' },
-      { id: 'CUST01', label: '門市客' }, { id: 'SALE01', label: '業務' },
+      { id: 'CUST01', label: '門市客', isDefault: true },
+      { id: 'CR0001', label: '保養廠' },
+      { id: 'CRM001', label: '機車行' },
+      { id: 'SALE01', label: '業務' },
       { id: 'B2B001', label: '盤商' }
     ]
 
@@ -234,7 +236,7 @@ const posDataController = {
         rowInfoTop.getCell(2).value = shopName
         rowInfoTop.getCell(8).value = `${filterIn.SALE_DATE_S} ~ ${filterIn.SALE_DATE_E}`
 
-        // 統計表標頭 (第2列)
+        // 統計表標頭
         const statHIdx = pageStart + 1
         cleanRow(ws, statHIdx)
         const statHeaderRow = ws.getRow(statHIdx)
@@ -246,7 +248,7 @@ const posDataController = {
           cell.fill = STYLES.FILL_BLACK; cell.font = STYLES.FONT_WHITE_BOLD; cell.border = STYLES.BORDER; cell.alignment = { horizontal: 'center', vertical: 'middle' }
         })
 
-        // 統計表內容
+        // 統計表內容渲染 (處理散客歸類)
         let groupTotals = {}
         PAY_MAPPING.forEach(p => {
           const rIdx = pageStart + p.rowOffset
@@ -256,9 +258,19 @@ const posDataController = {
           row.getCell(1).value = p.name; row.getCell(1).border = STYLES.BORDER
           row.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: CONFIG.INDENT_LEFT, wrapText: false }
           row.getCell(1).font = p.name === 'iPASS MONEY' ? STYLES.FONT_NORMAL_8 : STYLES.FONT_NORMAL
+
           let rSum = 0
           GRP_MAPPING.forEach(g => {
-            const val = shopData.filter(d => p.payIds.includes(d.PAY_ID) && d.VIPGRP_ID === g.id && d.PAY_ID !== '6').reduce((acc, cur) => acc + (Number(cur.TOTAL) || 0), 0)
+            const val = shopData.filter(d => {
+              const gid = (d.VIPGRP_ID || '').toString().trim()
+              const isMatchPay = p.payIds.includes(d.PAY_ID) && d.PAY_ID !== '6'
+              if (g.isDefault) {
+                // 門市客包含 ID 為空或 CUST01 的單據
+                return isMatchPay && (gid === 'CUST01' || gid === '')
+              }
+              return isMatchPay && gid === g.id
+            }).reduce((acc, cur) => acc + (Number(cur.TOTAL) || 0), 0)
+
             safeMerge(ws, rIdx, g.col, rIdx, g.col + 1)
             const cell = row.getCell(g.col); cell.value = val; cell.border = STYLES.BORDER
             cell.alignment = { horizontal: 'right', vertical: 'middle', indent: CONFIG.INDENT_RIGHT, wrapText: false }
@@ -268,6 +280,7 @@ const posDataController = {
           row.getCell(12).value = rSum; row.getCell(12).border = STYLES.BORDER; row.getCell(12).alignment = { horizontal: 'right', vertical: 'middle', indent: CONFIG.INDENT_RIGHT, wrapText: false }
         })
 
+        // 總計列
         const totalIdx = pageStart + 7
         cleanRow(ws, totalIdx)
         const tRow = ws.getRow(totalIdx)
@@ -287,17 +300,26 @@ const posDataController = {
         let currentCMCounter = PAGE_LIMITS.STAT_TABLE_TOTAL_CM
         let currentPageLimit = PAGE_LIMITS.TOTAL_PAGE_CM
 
-        // --- 3. 明細內容 ---
+        // --- 3. 明細內容渲染 (處理散客歸類) ---
         for (const grp of GROUP_CONFIGS) {
-          const items = shopData.filter(d => d.VIPGRP_ID === grp.id && d.PAY_ID !== '6')
+          const items = shopData.filter(d => {
+            const gid = (d.VIPGRP_ID || '').toString().trim()
+            if (grp.isDefault) {
+              return (gid === 'CUST01' || gid === '') && d.PAY_ID !== '6'
+            }
+            return gid === grp.id && d.PAY_ID !== '6'
+          })
+
           if (items.length === 0) continue
 
+          // 檢查分頁
           if (currentCMCounter + PAGE_LIMITS.ROW_DETAIL_CM > currentPageLimit) {
             ws.getRow(detIdx - 1).addPageBreak()
             detIdx = printDetailHeader(ws, detIdx, shopName, filterIn, true)
             currentCMCounter = PAGE_LIMITS.HEADER_AREA_CM
           }
 
+          // 繪製群組標題
           cleanRow(ws, detIdx)
           const gRow = ws.getRow(detIdx)
           gRow.height = CONFIG.ROW_HEIGHT_DEF
@@ -316,14 +338,13 @@ const posDataController = {
             if (currentCMCounter + itemHeightCM > currentPageLimit) {
               ws.getRow(detIdx - 1).addPageBreak()
               detIdx = printDetailHeader(ws, detIdx, shopName, filterIn, true)
-
+              // 補上群組續列標題
               cleanRow(ws, detIdx)
               const contRow = ws.getRow(detIdx)
               contRow.height = CONFIG.ROW_HEIGHT_DEF
               safeMerge(ws, detIdx, 1, detIdx, 23)
               const contCell = contRow.getCell(1)
               contCell.value = `${grp.label} (續)`; contCell.font = STYLES.FONT_BLACK_BOLD; contCell.fill = STYLES.FILL_GRAY; contCell.border = STYLES.BORDER; contCell.alignment = { horizontal: 'left', vertical: 'middle', indent: CONFIG.INDENT_LEFT, wrapText: false }
-
               detIdx++; currentCMCounter = PAGE_LIMITS.HEADER_AREA_CM + PAGE_LIMITS.ROW_DETAIL_CM
             }
 
