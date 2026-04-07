@@ -82,7 +82,7 @@ const saleData = {
           LEFT JOIN SALE02 S2 ON S0.SHOP_ID = S2.SHOP_ID AND S0.SALE_ID = S2.SALE_ID 
           LEFT JOIN PAYMENT PAY ON S2.PAY_ID = PAY.PAY_ID 
           WHERE S0.STATUS = '2' 
-          --AND S0.SHOP_ID NOT IN ('A', 'TEST01')
+          AND S0.SHOP_ID NOT IN ('A', 'TEST01')
 
           /* 過濾條件區 (與原邏輯完全一致) */
           AND (S0.SALE_DATE >= @S_DATE AND S0.SALE_DATE < DATEADD(DAY, 1, @E_DATE))

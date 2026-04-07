@@ -45,7 +45,7 @@ const posDataController = {
       TOTAL_PAGE_CM: 19.0,
       ROW_DETAIL_CM: 0.77,
       ROW_STAT_CM: 0.6,
-      STAT_TABLE_TOTAL_CM: (0.6 * 8) + 0.77,
+      STAT_TABLE_TOTAL_CM: (0.6 * 9) + 0.77,
       HEADER_AREA_CM: 0.77 * 2
     }
 
@@ -171,11 +171,12 @@ const posDataController = {
       { name: '信用卡', rowOffset: 3, payIds: ['4', '5'] },
       { name: 'LINE PAY', rowOffset: 4, payIds: ['H'] },
       { name: 'iPASS MONEY', rowOffset: 5, payIds: ['O', 'OP13'] },
-      { name: '賒帳', rowOffset: 6, payIds: ['Z', 'Z1'] }
+      { name: '匯款', rowOffset: 6, payIds: ['7', '8'] },
+      { name: '賒帳', rowOffset: 7, payIds: ['Z', 'Z1'] }
     ]
 
     const GRP_MAPPING = [
-      { id: 'CUST01', col: 2, isDefault: true }, // 標記門市客為預設分類
+      { id: 'CUST01', col: 2, isDefault: true },
       { id: 'CR0001', col: 4 },
       { id: 'CRM001', col: 6 },
       { id: 'SALE01', col: 8 },
@@ -229,14 +230,13 @@ const posDataController = {
         const shopData = data.filter(d => d.SHOP_NAME === shopName)
         const pageStart = currentRow
 
-        // --- 1. 統計表資訊列 ---
+        // --- 1. 統計表渲染 ---
         cleanRow(ws, pageStart)
         const rowInfoTop = ws.getRow(pageStart)
         setInfoRowStyle(rowInfoTop)
         rowInfoTop.getCell(2).value = shopName
         rowInfoTop.getCell(8).value = `${filterIn.SALE_DATE_S} ~ ${filterIn.SALE_DATE_E}`
 
-        // 統計表標頭
         const statHIdx = pageStart + 1
         cleanRow(ws, statHIdx)
         const statHeaderRow = ws.getRow(statHIdx)
@@ -248,26 +248,25 @@ const posDataController = {
           cell.fill = STYLES.FILL_BLACK; cell.font = STYLES.FONT_WHITE_BOLD; cell.border = STYLES.BORDER; cell.alignment = { horizontal: 'center', vertical: 'middle' }
         })
 
-        // 統計表內容渲染 (處理散客歸類)
         let groupTotals = {}
         PAY_MAPPING.forEach(p => {
           const rIdx = pageStart + p.rowOffset
           cleanRow(ws, rIdx)
           const row = ws.getRow(rIdx)
           row.height = CONFIG.ROW_HEIGHT_STAT
-          row.getCell(1).value = p.name; row.getCell(1).border = STYLES.BORDER
-          row.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', indent: CONFIG.INDENT_LEFT, wrapText: false }
-          row.getCell(1).font = p.name === 'iPASS MONEY' ? STYLES.FONT_NORMAL_8 : STYLES.FONT_NORMAL
+          const titleCell = row.getCell(1)
+          titleCell.value = p.name; titleCell.border = STYLES.BORDER
+          titleCell.alignment = { horizontal: 'left', vertical: 'middle', indent: CONFIG.INDENT_LEFT, wrapText: false }
+
+          // 修正：只有 iPASS MONEY 縮小為 8 號字，匯款維持與其他項目一致
+          titleCell.font = (p.name === 'iPASS MONEY') ? STYLES.FONT_NORMAL_8 : STYLES.FONT_NORMAL
 
           let rSum = 0
           GRP_MAPPING.forEach(g => {
             const val = shopData.filter(d => {
               const gid = (d.VIPGRP_ID || '').toString().trim()
               const isMatchPay = p.payIds.includes(d.PAY_ID) && d.PAY_ID !== '6'
-              if (g.isDefault) {
-                // 門市客包含 ID 為空或 CUST01 的單據
-                return isMatchPay && (gid === 'CUST01' || gid === '')
-              }
+              if (g.isDefault) return isMatchPay && (gid === 'CUST01' || gid === '')
               return isMatchPay && gid === g.id
             }).reduce((acc, cur) => acc + (Number(cur.TOTAL) || 0), 0)
 
@@ -280,8 +279,7 @@ const posDataController = {
           row.getCell(12).value = rSum; row.getCell(12).border = STYLES.BORDER; row.getCell(12).alignment = { horizontal: 'right', vertical: 'middle', indent: CONFIG.INDENT_RIGHT, wrapText: false }
         })
 
-        // 總計列
-        const totalIdx = pageStart + 7
+        const totalIdx = pageStart + 8
         cleanRow(ws, totalIdx)
         const tRow = ws.getRow(totalIdx)
         tRow.height = CONFIG.ROW_HEIGHT_STAT
@@ -296,30 +294,26 @@ const posDataController = {
         tRow.getCell(12).value = gTotal; tRow.getCell(12).font = STYLES.FONT_RED_BOLD; tRow.getCell(12).border = STYLES.BORDER; tRow.getCell(12).alignment = { horizontal: 'right', vertical: 'middle', indent: CONFIG.INDENT_RIGHT, wrapText: false }
 
         // --- 2. 明細初始化 ---
-        let detIdx = printDetailHeader(ws, pageStart + 9, shopName, filterIn, false)
+        let detIdx = printDetailHeader(ws, pageStart + 10, shopName, filterIn, false)
         let currentCMCounter = PAGE_LIMITS.STAT_TABLE_TOTAL_CM
         let currentPageLimit = PAGE_LIMITS.TOTAL_PAGE_CM
 
-        // --- 3. 明細內容渲染 (處理散客歸類) ---
+        // --- 3. 明細內容渲染 ---
         for (const grp of GROUP_CONFIGS) {
           const items = shopData.filter(d => {
             const gid = (d.VIPGRP_ID || '').toString().trim()
-            if (grp.isDefault) {
-              return (gid === 'CUST01' || gid === '') && d.PAY_ID !== '6'
-            }
+            if (grp.isDefault) return (gid === 'CUST01' || gid === '') && d.PAY_ID !== '6'
             return gid === grp.id && d.PAY_ID !== '6'
           })
 
           if (items.length === 0) continue
 
-          // 檢查分頁
           if (currentCMCounter + PAGE_LIMITS.ROW_DETAIL_CM > currentPageLimit) {
             ws.getRow(detIdx - 1).addPageBreak()
             detIdx = printDetailHeader(ws, detIdx, shopName, filterIn, true)
             currentCMCounter = PAGE_LIMITS.HEADER_AREA_CM
           }
 
-          // 繪製群組標題
           cleanRow(ws, detIdx)
           const gRow = ws.getRow(detIdx)
           gRow.height = CONFIG.ROW_HEIGHT_DEF
@@ -338,7 +332,6 @@ const posDataController = {
             if (currentCMCounter + itemHeightCM > currentPageLimit) {
               ws.getRow(detIdx - 1).addPageBreak()
               detIdx = printDetailHeader(ws, detIdx, shopName, filterIn, true)
-              // 補上群組續列標題
               cleanRow(ws, detIdx)
               const contRow = ws.getRow(detIdx)
               contRow.height = CONFIG.ROW_HEIGHT_DEF
@@ -352,17 +345,34 @@ const posDataController = {
             const row = ws.getRow(detIdx)
             row.height = maxL * CONFIG.ROW_HEIGHT_DEF
 
-            row.getCell(1).value = item.SALE_DATE; row.getCell(2).value = item.VIP_NAME; row.getCell(6).value = item.TYPE; row.getCell(8).value = item.PROD_NAME1
-            row.getCell(15).value = Number(item.QTY) || 0; row.getCell(16).value = item.UNIT; row.getCell(17).value = item.TASTE_MEMO
-            row.getCell(18).value = Number(item.SALE_PRICE) || 0; row.getCell(19).value = Number(item.DISC) || 0; row.getCell(20).value = Number(item.TOTAL) || 0
-            row.getCell(21).value = item.MEMO; row.getCell(22).value = item.PAY_NAEM; row.getCell(23).value = item.INV
+            row.getCell(1).value = item.SALE_DATE
+            row.getCell(2).value = (item.VIP_NAME && item.VIP_NAME.toString().trim()) ? item.VIP_NAME : '無'
+            row.getCell(6).value = item.TYPE
+            row.getCell(8).value = item.PROD_NAME1
+            row.getCell(15).value = Number(item.QTY) || 0
+            row.getCell(16).value = item.UNIT
+            row.getCell(17).value = item.TASTE_MEMO
+            row.getCell(18).value = Number(item.SALE_PRICE) || 0
+            row.getCell(19).value = Number(item.DISC) || 0
+            row.getCell(20).value = Number(item.TOTAL) || 0
+            row.getCell(21).value = item.MEMO
+            row.getCell(22).value = item.PAY_NAEM
+            row.getCell(23).value = item.INV
 
             DETAIL_MERGE_CONFIGS.forEach(m => safeMerge(ws, detIdx, m.start, detIdx, m.end))
 
             for (let c = 1; c <= 23; c++) {
               const cell = row.getCell(c)
               cell.border = STYLES.BORDER; cell.font = STYLES.FONT_NORMAL
-              if (c === 22 && ['iPASS MONEY', '賒帳(不開發票)', '信用卡(已付款)'].includes(item.PAY_NAEM)) cell.font = STYLES.FONT_NORMAL_10
+
+              // 修正：關鍵字判定，匯款(不論已付/未付)不列入縮小範圍，其餘長字串縮小
+              if (c === 22 && item.PAY_NAEM) {
+                const pName = item.PAY_NAEM.toString()
+                if (pName.includes('iPASS') || pName.includes('賒帳') || pName.includes('信用卡')) {
+                  cell.font = STYLES.FONT_NORMAL_10
+                }
+              }
+
               if (DETAIL_MERGE_CONFIGS.some(m => c > m.start && c <= m.end)) continue
               let alH = 'center'
               if ([2, 8, 21, 22].includes(c)) alH = 'left'
