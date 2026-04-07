@@ -93,7 +93,6 @@ const downloadModel = {
                     WHEN S2.PAY_ID = 'Z'    THEN '19'
                     WHEN S2.PAY_ID = 'Z1'   THEN '1A'
                     WHEN S2.PAY_ID = '7'    THEN '1B'
-                    WHEN S2.PAY_ID = '8'    THEN '1C'
                     ELSE N'未設定的「' + CAST(ISNULL(S2.PAY_ID, '') AS NVARCHAR(MAX)) + N'」，請通知系統管理員'
                 END AS NVARCHAR(MAX)) AS 交易類型,
 
@@ -108,7 +107,6 @@ const downloadModel = {
                     WHEN S2.PAY_ID = 'Z'    THEN '19'
                     WHEN S2.PAY_ID = 'Z1'   THEN '1A'
                     WHEN S2.PAY_ID = '7'    THEN '1B'
-                    WHEN S2.PAY_ID = '8'    THEN '1C'
                     ELSE 'ZZZ'
                 END AS 交易類型_排序,
 

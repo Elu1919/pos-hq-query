@@ -171,7 +171,7 @@ const posDataController = {
       { name: '信用卡', rowOffset: 3, payIds: ['4', '5'] },
       { name: 'LINE PAY', rowOffset: 4, payIds: ['H'] },
       { name: 'iPASS MONEY', rowOffset: 5, payIds: ['O', 'OP13'] },
-      { name: '匯款', rowOffset: 6, payIds: ['7', '8'] },
+      { name: '匯款', rowOffset: 6, payIds: ['7'] },
       { name: '賒帳', rowOffset: 7, payIds: ['Z', 'Z1'] }
     ]
 
