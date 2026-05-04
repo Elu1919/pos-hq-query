@@ -144,7 +144,7 @@
         <td>{{PROD_ID}}</td>
         <td>{{PROD_NAME1}}</td>
         {{#each ../shopList}}
-        <td class="text-center shop-col"
+        <td class="text-center shop-col {{#if (eq (lookup ../this SHOP_ID) 0)}}text-muted{{else}}fw-bold{{/if}}"
             data-shop-id="{{SHOP_ID}}"
             data-stock="{{lookup ../this SHOP_ID}}">
           {{lookup ../this SHOP_ID}}
