@@ -183,7 +183,7 @@ const formController = {
         const rowInPage = i % pageSize
         const rowNumber = startRow + pageIndex * pageRows + tempTopRows + rowInPage
         const data = dataList[i]
-        const orderDate = data.ORDER_TIME.toString().replace('Z', '')
+        const orderDate = data.SALE_DATE.toString().replace('Z', '')
         const shopName = data.SHOP_NAME.slice(0, 2)
         const type = Number(data.TYPE) < 3 ? Number(data.TYPE) === 0 ? '銷貨' : Number(data.TYPE) === 1 ? '銷退' : '已退' : null
 

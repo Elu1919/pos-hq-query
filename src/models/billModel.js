@@ -13,17 +13,21 @@ const billData = {
       const bMonthE = (filterIn.BillMonthEnd || bMonthS || '').toString()
       const shopId = (filterIn.SHOP_ID || '').toString() // 單選門市
 
+      console.log(filterIn)
+
       const result = await pool.request()
         .input('B_MONTH_S_VAL', bMonthS)
         .input('B_MONTH_E_VAL', bMonthE)
         .input('SHOP_ID_VAL', shopId)
-        .input('VIP_ID', filterIn.VIP_ID || '')
-        .input('VIP_NAME', filterIn.VIP_NAME || '')
+        .input('VIP_ID_VAL', filterIn.VIP_ID || '')
+        .input('VIP_NAME_VAL', filterIn.VIP_NAME || '')
         .query(`
         /* 1. 變數初始化與月份處理 */
         DECLARE @B_MS_VAL NVARCHAR(6) = @B_MONTH_S_VAL
         DECLARE @B_ME_VAL NVARCHAR(6) = @B_MONTH_E_VAL
         DECLARE @S_ID_VAL NVARCHAR(10) = @SHOP_ID_VAL
+        DECLARE @VIP_ID NVARCHAR(50) = @VIP_ID_VAL
+        DECLARE @VIP_NAME NVARCHAR(50) = @VIP_NAME_VAL
 
         -- 如果沒有輸入日期，預設為當前月份
         DECLARE @B_MONTH_S NVARCHAR(6) = CASE WHEN @B_MS_VAL = '' THEN FORMAT(GETDATE(), 'yyyyMM') ELSE @B_MS_VAL END
@@ -56,7 +60,7 @@ const billData = {
             SELECT
               S1.SHOP_ID, S0.TYPE, S1.SALE_ID, S1.PROD_ID,
               S1.SALE_PRICE, S1.QTY, S1.SALE_PRICE * S1.QTY AS SUBTOTAL,
-              S1.ITEM_DISC, S1.FREE_MEMO, S1.ORDER_TIME,
+              S1.ITEM_DISC, S1.FREE_MEMO, S0.SALE_DATE,
               SHOP.SHOP_NAME, PROD.PROD_NAME1, UNIT.UNIT_NAME
             FROM BILL00 B0
             INNER JOIN BILL01 B1 ON B1.BILL_ID = B0.BILL_ID
