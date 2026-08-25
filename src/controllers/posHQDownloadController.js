@@ -175,7 +175,7 @@ const posDataController = {
     try {
       const id = req.body.OUT_ID
 
-      const data = await downloadData.posStOrderOutToERP(id)
+      const data = await downloadData.posStOrderOutToERP2(id)
 
       if (!data || data.length === 0) {
         return res.send(`

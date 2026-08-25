@@ -3,6 +3,7 @@
 const { poolPromise } = require('../config/db')
 
 const downloadModel = {
+    // POS銷售單 to ERP銷售單
     posSaleToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
@@ -183,6 +184,7 @@ const downloadModel = {
             throw err
         }
     },
+    // POS調撥單 to ERP調撥單
     posTransferToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
@@ -337,6 +339,7 @@ const downloadModel = {
             throw err
         }
     },
+    // POS調撥未抓取清單
     posNoTransferToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
@@ -459,6 +462,7 @@ const downloadModel = {
             throw err
         }
     },
+    // POS領用 to ERP領用
     posMaterialToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
@@ -544,6 +548,7 @@ const downloadModel = {
             throw err
         }
     },
+    // POS出貨單 to ERP調撥單
     posStOrderOutToERP: async (id) => {
         try {
             const pool = await poolPromise
@@ -585,6 +590,67 @@ const downloadModel = {
                 WHERE O.OUT_ID = @TARGET_ID
                 /* 最終排序：依據原始序號 OUT_SNO 排序 */
                 ORDER BY D.OUT_SNO ASC
+            `)
+            return result.recordset
+        } catch (err) {
+            console.error('總部出貨資料取得失敗：', err)
+            throw err
+        }
+    },
+    // POS出貨單 to ERP銷售單
+    posStOrderOutToERP2: async (id) => {
+        try {
+            const pool = await poolPromise
+            const result = await pool.request()
+                .input('TARGET_ID_VAL', (id || '').toString())
+                .query(`
+                /* 1. 定義目標單號，支援長單號 */
+                DECLARE @TARGET_ID NVARCHAR(50) = @TARGET_ID_VAL
+
+                /* 2. 主查詢邏輯 */
+                SELECT
+                CONVERT(VARCHAR(8), GETDATE(), 112) AS [日期], /* 帶入匯出當天日期 (YYYYMMDD) */
+                '1' AS [序號],
+                O.TO_SHOP AS [客戶/供應商編碼],
+                '' AS [客戶/供應商名稱],
+                O.OUT_SHOP AS [發貨倉庫],
+                '' AS [承辦人],
+                '13' AS [交易類型],
+                '' AS [貨幣],
+                '' AS [匯率],
+                '' AS [銷貨單單號],
+                '' AS [關鍵字],
+                E.EMP_NAME AS [服務人員],
+                '總部出貨' AS [類型],
+                D.OUT_ID AS [POS單號],
+                '' AS [貴賓電話],
+                CAST(
+                    ISNULL(
+                        CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                        N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號'
+                    ) AS NVARCHAR(MAX)
+                ) AS [品項編碼],
+                '' AS [品項名稱],
+                '' AS [規格],
+                D.QUANTITY AS [數量],
+                '' AS [加值],
+                '' AS [單價],
+                '' AS [總折讓],
+                '' AS [外幣金額],
+                '' AS [小計(稅前價)],
+                '' AS [營業稅],
+                '' AS [招待備註],
+                '' AS [發票號碼],
+                '' AS [載具/統編],
+                O.MEMO AS [備註],
+                '' AS [原銷貨單號],
+                '' AS [產生生產入庫]
+            FROM OUT00 O
+            INNER JOIN OUT01 D ON LTRIM(RTRIM(O.OUT_ID)) = LTRIM(RTRIM(D.OUT_ID))
+            LEFT JOIN PRODUCT00 P ON LTRIM(RTRIM(D.PROD_ID)) = LTRIM(RTRIM(P.PROD_ID))
+            LEFT JOIN EMPLOYEE E ON LTRIM(RTRIM(O.USER_ID)) = LTRIM(RTRIM(E.EMP_ID))
+            WHERE LTRIM(RTRIM(O.OUT_ID)) = LTRIM(RTRIM(@TARGET_ID))
+            ORDER BY D.OUT_SNO ASC
             `)
             return result.recordset
         } catch (err) {
