@@ -12,6 +12,14 @@ const saleData = require('../models/saleModel')
 const vipData = require('../models/vipModel')
 const prodData = require('../models/prodModel')
 const stOrderData = require('../models/stOrderModel')
+const billData = require('../models/billModel')
+
+const templatePath = path.join(__dirname, '../../public/form/應收帳款明細表_範本.xlsx')
+let templateBuffer = null
+
+if (fs.existsSync(templatePath)) {
+  templateBuffer = fs.readFileSync(templatePath)
+}
 
 const formController = {
   exportSalesData: async (req, res) => {
@@ -104,126 +112,163 @@ const formController = {
     }
   },
   exportBillById: async (req, res) => {
-    const { id } = req.params
-    const { bills } = req.body
-    const bill = bills.find(b => b.STR_BAL_ID === id)
-    if (!bill) return res.status(404).send('找不到資料')
+    try {
+      const { id } = req.params
 
-    const ExcelJS = require('exceljs')
-    const wb = new ExcelJS.Workbook()
-    const templatePath = path.join(__dirname, '../../public/form/應收帳款明細表_範本.xlsx')
-    if (!fs.existsSync(templatePath)) throw new Error('範本檔不存在: ' + templatePath)
-    await wb.xlsx.readFile(templatePath)
+      // 1. 從資料庫取得資料
+      const bill = await billData.getBillById(id)
+      if (!bill) return res.status(404).send('找不到資料')
 
-    const ws = wb.getWorksheet(1)
-    const billYear = bill.BILL_MONTH.slice(0, 4)
-    const billMonth = Number(bill.BILL_MONTH.slice(4, 6))
-    const billYearLast = billMonth === 1 ? billYear - 1 : billYear
-    const billMonthLast = billMonth === 1 ? 12 : billMonth - 1
-    const tel = bill.VIP.TELEPHONE || ''
-    const mob = bill.VIP.MOBILE || ''
-    const vipTel = tel ? mob ? `${tel} / ${mob}` : tel : mob
+      // 2. 載入單頁範本檔
+      const wb = new ExcelJS.Workbook()
+      if (!templateBuffer) {
+        if (!fs.existsSync(templatePath)) throw new Error('範本檔不存在: ' + templatePath)
+        templateBuffer = fs.readFileSync(templatePath)
+      }
+      await wb.xlsx.load(templateBuffer)
 
-    ws.getCell('A2').value = `${billYear} 年 ${billMonth} 月 應收對帳明細表`
-    ws.getCell('D4').value = bill.SHOP_NAME
-    ws.getCell('K4').value = bill.TEL
-    ws.getCell('D6').value = bill.VIP.VIP_ID
-    ws.getCell('K6').value = bill.VIP.NAME
-    ws.getCell('W6').value = bill.VIP.LINKMAN
-    ws.getCell('AG6').value = vipTel
-    ws.getCell('D7').value = bill.VIP.VIP_CODE
-    ws.getCell('K7').value = bill.VIP.COMPANY
-    ws.getCell('W7').value = bill.VIP.COMPANY_ADDR
-    ws.getCell('D9').value = `${billYearLast}/${billMonthLast}/26 ~ ${billYear}/${billMonth}/25`
-    ws.getCell('N9').value = bill.AMOUNT
-    ws.getCell('T9').value = bill.DISCOUNT
-    ws.getCell('Y9').value = bill.DISCHARGE
-    ws.getCell('AE9').value = bill.MISCELL_COST
-    ws.getCell('AK9').value = bill.TOTAL
-    ws.getCell('E11').value = bill.TOTAL
-    ws.getCell('AI13').value = bill.STR_BAL_ID
+      const ws = wb.getWorksheet(1)
+      const billYear = bill.BILL_MONTH.slice(0, 4)
+      const billMonth = Number(bill.BILL_MONTH.slice(4, 6))
+      const billYearLast = billMonth === 1 ? Number(billYear) - 1 : billYear
+      const billMonthLast = billMonth === 1 ? 12 : billMonth - 1
+      const tel = bill.VIP?.TELEPHONE || ''
+      const mob = bill.VIP?.MOBILE || ''
+      const vipTel = tel ? (mob ? `${tel} / ${mob}` : tel) : mob
 
-    const dataList = bill.SALE_LIST
+      // 第一頁表頭基礎資訊填入
+      ws.getCell('A2').value = `${billYear} 年 ${billMonth} 月 應收對帳明細表`
+      ws.getCell('D4').value = bill.SHOP_NAME
+      ws.getCell('K4').value = bill.TEL
+      ws.getCell('D6').value = bill.VIP?.VIP_ID || ''
+      ws.getCell('K6').value = bill.VIP?.NAME || ''
+      ws.getCell('W6').value = bill.VIP?.LINKMAN || ''
+      ws.getCell('AG6').value = vipTel
+      ws.getCell('D7').value = bill.VIP?.VIP_CODE || ''
+      ws.getCell('K7').value = bill.VIP?.COMPANY || ''
+      ws.getCell('W7').value = bill.VIP?.COMPANY_ADDR || ''
+      ws.getCell('D9').value = `${billYearLast}/${billMonthLast}/26 ~ ${billYear}/${billMonth}/25`
+      ws.getCell('N9').value = bill.AMOUNT
+      ws.getCell('T9').value = bill.DISCOUNT
+      ws.getCell('Y9').value = bill.DISCHARGE
+      ws.getCell('AE9').value = bill.MISCELL_COST
+      ws.getCell('AK9').value = bill.TOTAL
+      ws.getCell('E11').value = bill.TOTAL
+      ws.getCell('AI13').value = bill.STR_BAL_ID
 
-    let startRow = 1
-    const tempTopRows = 14
-    const pageSize = 16
-    const tempBotRows = 1
-    const pageRows = tempTopRows + pageSize + tempBotRows
+      const dataList = bill.SALE_LIST || []
+      const tempTopRows = 14
+      const pageSize = 16
+      const tempBotRows = 1
+      const pageRows = tempTopRows + pageSize + tempBotRows // 每頁 31 列
+      const totalPages = Math.ceil(dataList.length / pageSize) || 1
 
-    function copyTemplate(ws, sourceStart, sourceEnd, targetStart) {
-      for (let r = sourceStart; r <= sourceEnd; r++) {
-        const sourceRow = ws.getRow(r)
-        const targetRow = ws.getRow(targetStart + (r - sourceStart))
-        targetRow.height = sourceRow.height
-        sourceRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          const targetCell = targetRow.getCell(colNumber)
-          targetCell.value = cell.value
-          targetCell.style = { ...cell.style }
+      // 取得第一頁原始的合併儲存格資訊
+      const firstPageMerges = []
+      ws.model.merges.forEach(merge => {
+        const [start, end] = merge.split(':')
+        const startCol = start.replace(/[0-9]/g, '')
+        const startRow = parseInt(start.replace(/[A-Z]/g, ''), 10)
+        const endCol = end.replace(/[0-9]/g, '')
+        const endRow = parseInt(end.replace(/[A-Z]/g, ''), 10)
+
+        if (startRow <= pageRows && endRow <= pageRows) {
+          firstPageMerges.push({
+            startCol,
+            endCol,
+            startRowOffset: startRow - 1,
+            rowSpan: endRow - startRow
+          })
+        }
+      })
+
+      // 3. ✅ 高效複製第一頁格式與樣式至第 2 頁以後
+      for (let pageIndex = 1; pageIndex < totalPages; pageIndex++) {
+        const targetStart = 1 + pageIndex * pageRows
+
+        // 複製列高度、儲存格樣式與非明細區固定數值
+        for (let r = 1; r <= pageRows; r++) {
+          const sourceRow = ws.getRow(r)
+          const targetRow = ws.getRow(targetStart + (r - 1))
+          targetRow.height = sourceRow.height
+
+          sourceRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            const targetCell = targetRow.getCell(colNumber)
+
+            if (cell.style) {
+              targetCell.style = Object.assign({}, cell.style)
+            }
+
+            if (r <= tempTopRows || r > tempTopRows + pageSize) {
+              targetCell.value = cell.value
+            }
+          })
+        }
+
+        // 複製並套用該頁的合併儲存格
+        firstPageMerges.forEach(m => {
+          const newStartRow = targetStart + m.startRowOffset
+          const newEndRow = newStartRow + m.rowSpan
+          ws.mergeCells(`${m.startCol}${newStartRow}:${m.endCol}${newEndRow}`)
         })
       }
-      for (let r = targetStart + tempTopRows; r < targetStart + tempTopRows + pageSize; r++) {
-        ws.getRow(r).eachCell({ includeEmpty: true }, (cell) => { cell.value = null })
-      }
-    }
 
-    const totalPages = Math.ceil(dataList.length / pageSize)
+      // 4. ✅ 填入各頁銷售明細資料與頁碼
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const startDataIndex = pageIndex * pageSize
+        const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
+        const pageStartRow = 1 + pageIndex * pageRows + tempTopRows
 
-    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
-      if (pageIndex > 0) {
-        const targetStart = startRow + pageIndex * pageRows
-        copyTemplate(ws, 1, pageRows, targetStart)
-      }
+        for (let i = startDataIndex; i < endDataIndex; i++) {
+          const rowInPage = i % pageSize
+          const rowNumber = pageStartRow + rowInPage
+          const data = dataList[i]
+          const orderDate = data.SALE_DATE ? data.SALE_DATE.toString().replace('Z', '') : ''
+          const shopName = data.SHOP_NAME ? data.SHOP_NAME.slice(0, 2) : ''
+          const typeNum = Number(data.TYPE)
+          const type = typeNum < 3 ? (typeNum === 0 ? '銷貨' : typeNum === 1 ? '銷退' : '已退') : null
 
-      // 填資料 
-      const startDataIndex = pageIndex * pageSize
-      const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
+          ws.getCell(`A${rowNumber}`).value = orderDate ? dayjs(orderDate).format('YY-MM-DD') : ''
+          ws.getCell(`D${rowNumber}`).value = shopName
+          ws.getCell(`F${rowNumber}`).value = type
+          ws.getCell(`H${rowNumber}`).value = data.SALE_ID
+          ws.getCell(`N${rowNumber}`).value = data.PROD_NAME1
+          ws.getCell(`W${rowNumber}`).value = data.SALE_PRICE
+          ws.getCell(`Z${rowNumber}`).value = data.QTY
+          ws.getCell(`AB${rowNumber}`).value = data.UNIT_NAME
+          ws.getCell(`AC${rowNumber}`).value = data.SUBTOTAL
+          ws.getCell(`AF${rowNumber}`).value = data.ITEM_DISC
+          ws.getCell(`AI${rowNumber}`).value = data.FREE_MEMO
+        }
 
-      for (let i = startDataIndex; i < endDataIndex; i++) {
-        const rowInPage = i % pageSize
-        const rowNumber = startRow + pageIndex * pageRows + tempTopRows + rowInPage
-        const data = dataList[i]
-        const orderDate = data.SALE_DATE.toString().replace('Z', '')
-        const shopName = data.SHOP_NAME.slice(0, 2)
-        const type = Number(data.TYPE) < 3 ? Number(data.TYPE) === 0 ? '銷貨' : Number(data.TYPE) === 1 ? '銷退' : '已退' : null
-
-        ws.getCell(`A${rowNumber}`).value = dayjs(orderDate).format('YY-MM-DD')
-        ws.getCell(`D${rowNumber}`).value = shopName
-        ws.getCell(`F${rowNumber}`).value = type
-        ws.getCell(`H${rowNumber}`).value = data.SALE_ID
-        ws.getCell(`N${rowNumber}`).value = data.PROD_NAME1
-        ws.getCell(`W${rowNumber}`).value = data.SALE_PRICE
-        ws.getCell(`Z${rowNumber}`).value = data.QTY
-        ws.getCell(`AB${rowNumber}`).value = data.UNIT_NAME
-        ws.getCell(`AC${rowNumber}`).value = data.SUBTOTAL
-        ws.getCell(`AF${rowNumber}`).value = data.ITEM_DISC
-        ws.getCell(`AI${rowNumber}`).value = data.FREE_MEMO
+        const pageFooterRow = pageStartRow + pageSize
+        ws.getCell(`A${pageFooterRow}`).value = `第${pageIndex + 1} 頁 / 共${totalPages} 頁`
       }
 
-      // 頁碼 
-      const rowNumber = startRow + pageIndex * pageRows + tempTopRows + pageSize
-      ws.getCell(`A${rowNumber}`).value = `第${pageIndex + 1} 頁 / 共${totalPages} 頁`
+      // 5. 欄寬與列印設定
+      for (let i = 1; i <= 40; i++) {
+        ws.getColumn(i).width = 3.9
+      }
+
+      const lastRow = totalPages * pageRows
+      ws.pageSetup.printArea = `A1:AM${lastRow}`
+      ws.pageSetup.orientation = 'landscape'
+      ws.pageSetup.paperSize = 9
+
+      // 6. Response 傳送
+      const fileName = `${bill.VIP?.NAME || ''}_${billYear} 年 ${billMonth} 月 應收對帳明細表.xlsx`
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition',
+        `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
+      )
+
+      await wb.xlsx.write(res)
+      res.end()
+
+    } catch (err) {
+      console.error('❌ 匯出失敗：', err)
+      res.status(500).send('匯出失敗')
     }
-
-    // 欄寬調整 
-    for (let i = 1; i <= 40; i++) {
-      ws.getColumn(i).width = 3.9
-    }
-
-    // 設定列印範圍與橫向列印 
-    const lastRow = totalPages * pageRows
-    ws.pageSetup.printArea = `A1:AM${lastRow}`
-    ws.pageSetup.orientation = 'landscape'
-    ws.pageSetup.paperSize = 9
-
-    // 設定下載 header
-    const fileName = `${bill.VIP.NAME}_${billYear} 年 ${billMonth} 月 應收對帳明細表.xlsx`
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition',
-      `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
-    )
-    await wb.xlsx.write(res)
-    res.end()
   },
   exportVipA4barcode: async (req, res) => {
     const { vipIdList } = req.body

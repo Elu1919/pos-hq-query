@@ -1,5 +1,3 @@
-// src/controller/billController.js
-
 const dayjs = require('dayjs')
 
 const shopData = require('../models/shopModel')
@@ -34,9 +32,12 @@ const billController = {
   },
   showBillDetails: async (req, res) => {
     try {
-      const lists = await getLists()
       const filter = { ...req.body }
-      const bills = await billData.getAllBillData(filter)
+      // 使用 Promise.all 平行處理下拉選單與對帳單資料查詢
+      const [lists, bills] = await Promise.all([
+        getLists(),
+        billData.getAllBillData(filter)
+      ])
       res.render('billQuery', { bills, lists, filter })
     } catch (err) {
       console.error('❌ 取得帳款明細失敗：', err)
