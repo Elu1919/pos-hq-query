@@ -98,8 +98,6 @@ const billData = {
       throw err
     }
   },
-
-  // ✅ 專門供匯出使用：改為原生地 2 個 Recordset 平坦查詢，秒級回傳
   getBillById: async (strBalId) => {
     try {
       const pool = await poolPromise

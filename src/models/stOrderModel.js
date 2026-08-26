@@ -39,7 +39,7 @@ const orderData = {
               O.SHOP_ID,
               O.ORDER_ID,
               CONVERT(VARCHAR(16), O.EXPECT_DATE, 120) AS EXPECT_DATE,
-              CONVERT(VARCHAR(16), O.INPUT_DATE, 120) AS INPUT_DATE,
+              CONVERT(VARCHAR(16), O.APP_DATE, 120) AS APP_DATE,
               E.EMP_NAME AS [USER],
               O.OUT_SHOP,
               O.EXPORT_ID,
@@ -52,7 +52,7 @@ const orderData = {
           WHERE O.STATUS = '2'
             AND O.EXPORTED IN ('F', 'O')
             AND O.SHOP_ID NOT IN ('A', 'TEST01')
-            AND (O.INPUT_DATE >= @SALE_DATE_S AND O.INPUT_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
+            AND (O.APP_DATE >= @SALE_DATE_S AND O.APP_DATE < DATEADD(DAY, 1, @SALE_DATE_E))
             AND (
                 ISNULL(@SHOP_ID_STR, '') = '' 
                 OR O.SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @ShopXml.nodes('/root/v') AS t(v))
@@ -62,7 +62,7 @@ const orderData = {
                 OR O.EXPORTED IN (SELECT t.v.value('.', 'NVARCHAR(20)') FROM @StateXml.nodes('/root/v') AS t(v))
             )
           ORDER BY 
-              O.INPUT_DATE DESC,
+              O.APP_DATE DESC,
               O.SHOP_ID ASC
         `)
       return result.recordset
@@ -90,6 +90,7 @@ const orderData = {
               O.SHOP_ID,
               O.ORDER_ID,
               CONVERT(VARCHAR(16), O.INPUT_DATE, 120) AS INPUT_DATE,
+              CONVERT(VARCHAR(16), O.APP_DATE, 120) AS APP_DATE,
               E.EMP_NAME AS [USER],
               O.OUT_SHOP,
               O.EXPORT_ID,
@@ -123,6 +124,7 @@ const orderData = {
         SHOP_ID: rows[0].SHOP_ID,
         ORDER_ID: rows[0].ORDER_ID,
         INPUT_DATE: rows[0].INPUT_DATE,
+        APP_DATE: rows[0].APP_DATE,
         USER: rows[0].USER,
         OUT_SHOP: rows[0].OUT_SHOP,
         EXPORT_ID: rows[0].EXPORT_ID,
@@ -131,7 +133,7 @@ const orderData = {
         STK_ID: rows[0].STK_ID,
         detail_count: rows[0].detail_count,
         PROD_DATA: rows
-          .filter(row => row.ORDER_SNO !== null) // 確保有明細才放入
+          .filter(row => row.ORDER_SNO !== null)
           .map(row => ({
             ORDER_SNO: row.ORDER_SNO,
             DEP: row.DEP,

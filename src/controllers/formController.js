@@ -568,10 +568,11 @@ const formController = {
 
     // === 4. 頁首頁尾設定 ===
     const HEADER_FOOTER = {
-      oddHeader: '&C&16&"微軟正黑體,粗體"補撥明細表', // 置中標題
-      oddFooter: '&R第 &P 頁，共 &N 頁'               // 右下角頁碼
+      oddHeader: '&C&16&"微軟正黑體,粗體"補撥明細表',
+      oddFooter: '&R第 &P 頁，共 &N 頁'
     }
 
+    // === 5. 樣式定義 ===
     const BORDER_STYLE = {
       top: { style: 'thin' },
       left: { style: 'thin' },
@@ -629,194 +630,16 @@ const formController = {
       for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
         const startRow = 1 + (pageIndex * PAGE_TOTAL_ROWS)
 
+        // 如果是第二頁以後，複製第一頁的標題與單頭格式
         if (pageIndex > 0) {
           copyPageTemplate(ws, 1, HEADER_ROWS, startRow)
         }
 
         // 填寫單頭
         ws.getCell(`B${startRow}`).value = order.SHOP_ID
-        ws.getCell(`G${startRow}`).value = order.INPUT_DATE
+        ws.getCell(`G${startRow}`).value = order.APP_DATE
         ws.getCell(`B${startRow + 1}`).value = order.USER
         ws.getCell(`G${startRow + 1}`).value = order.ORDER_ID
-
-        const startDataIndex = pageIndex * pageSize
-        const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
-
-        for (let i = startDataIndex; i < endDataIndex; i++) {
-          const item = dataList[i]
-          const relativeIndex = i - startDataIndex
-          const isLeft = relativeIndex < dataRowsPerPage
-          const rowInPage = isLeft ? relativeIndex : relativeIndex - dataRowsPerPage
-          const rowNumber = startRow + HEADER_ROWS + rowInPage
-
-          const colMap = isLeft
-            ? { dep: 'A', name: 'B', qty: 'C', unit: 'D' }
-            : { dep: 'F', name: 'G', qty: 'H', unit: 'I' }
-
-          ws.getCell(`${colMap.dep}${rowNumber}`).value = item.DEP
-          ws.getCell(`${colMap.name}${rowNumber}`).value = item.PROD_NAME
-          ws.getCell(`${colMap.qty}${rowNumber}`).value = item.QUANTITY
-          ws.getCell(`${colMap.unit}${rowNumber}`).value = item.UNIT
-
-          Object.entries(colMap).forEach(([key, col]) => {
-            const cell = ws.getCell(`${col}${rowNumber}`)
-            cell.border = BORDER_STYLE
-
-            // 修正對齊邏輯：類別(dep) 與 名稱(name) 皆置左，其餘置中
-            const isAlignLeft = key === 'dep' || key === 'name'
-
-            cell.alignment = {
-              vertical: 'middle',
-              horizontal: isAlignLeft ? 'left' : 'center',
-              wrapText: true
-            }
-          })
-
-          ws.getRow(rowNumber).height = ROW_HEIGHT
-        }
-
-        if (pageIndex < totalPages - 1) {
-          ws.getRow(startRow + PAGE_TOTAL_ROWS - 1).addPageBreak()
-        }
-      }
-
-      ws.pageSetup.printArea = `A1:I${totalPages * PAGE_TOTAL_ROWS}`
-      ws.views = []
-
-      const fileName = `補撥明細_${order.SHOP_ID}_${dayjs().format('YYYYMMDD')}.xlsx`
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`)
-
-      await wb.xlsx.write(res)
-      res.end()
-
-    } catch (err) {
-      console.error('Excel 匯出失敗:', err)
-      if (!res.headersSent) res.status(500).send('匯出失敗')
-    }
-  },
-  exportStOrderOutData: async (req, res) => {
-    // === 1. 檔案與基礎配置變數 ===
-    const TEMPLATE_FILENAME = '出貨明細_範本.xlsx'
-    const HEADER_ROWS = 4            // 單頭(3列) + 標題(1列)
-    const PAGE_TOTAL_ROWS = 29       // 每頁總列數
-    const ROW_HEIGHT = 21           // 資料列高
-    const UNIT_CONVERSION = 5.5      // 公分轉 Excel 欄寬係數
-    const DEFAULT_FONT_NAME = '微軟正黑體'
-
-    // === 2. 欄寬配置 (單位：公分) ===
-    const COL_WIDTH_CM = [
-      { col: 1, cm: 4.2 },  // A: 商品類別
-      { col: 2, cm: 7.5 },  // B: 商品名稱
-      { col: 3, cm: 1.3 },  // C: 數量
-      { col: 4, cm: 1.1 },  // D: 單位
-      { col: 5, cm: 0.2 },  // E: 間距 (窄)
-      { col: 6, cm: 4.2 },  // F: 商品類別
-      { col: 7, cm: 7.5 },  // G: 商品名稱
-      { col: 8, cm: 1.3 },  // H: 數量
-      { col: 9, cm: 1.1 }   // I: 單位
-    ]
-
-    // === 3. 版面設定變數 ===
-    const PAGE_SETUP = {
-      orientation: 'landscape',      // 橫式
-      paperSize: 9,                  // A4
-      margins: {
-        left: 0.1, right: 0.1,
-        top: 0.1, bottom: 0.1,
-        header: 0, footer: 0
-      },
-      fitToPage: true,
-      fitToWidth: 1,
-      fitToHeight: 0,
-      horizontalCentered: true       // 水平置中
-    }
-
-    // === 4. 頁首頁尾設定 ===
-    const HEADER_FOOTER = {
-      oddHeader: '&C&16&"微軟正黑體,粗體"出貨明細表',
-      oddFooter: '&R第 &P 頁，共 &N 頁'
-    }
-
-    // === 5. 樣式定義 ===
-    const FONT_NORMAL = { name: DEFAULT_FONT_NAME, size: 11 }
-    const BORDER_STYLE = {
-      top: { style: 'thin' },
-      left: { style: 'thin' },
-      bottom: { style: 'thin' },
-      right: { style: 'thin' }
-    }
-
-    try {
-      const outId = req.body.OUT_ID
-      if (!outId) return res.status(400).send('缺少 OUT_ID')
-
-      const order = await stOrderData.getOrderOutDetail(outId)
-      if (!order) return res.status(404).send('找不到訂單資料')
-
-      const wb = new ExcelJS.Workbook()
-      const templatePath = path.join(__dirname, '../../public/form/', TEMPLATE_FILENAME)
-
-      if (!fs.existsSync(templatePath)) {
-        return res.status(500).send('範本檔不存在: ' + templatePath)
-      }
-
-      await wb.xlsx.readFile(templatePath)
-      const ws = wb.getWorksheet(1)
-
-      // 套用欄寬
-      COL_WIDTH_CM.forEach(item => {
-        ws.getColumn(item.col).width = item.cm * UNIT_CONVERSION
-      })
-
-      // 套用版面與頁首頁尾
-      ws.pageSetup = {
-        ...PAGE_SETUP,
-        headerFooter: HEADER_FOOTER
-      }
-
-      const dataList = order.PROD_DATA || []
-      const dataRowsPerPage = PAGE_TOTAL_ROWS - HEADER_ROWS
-      const pageSize = dataRowsPerPage * 2 // 左右兩側對開
-      const totalPages = Math.ceil(dataList.length / pageSize) || 1
-
-      // 複製範本格式的輔助函數
-      const copyPageTemplate = (ws, sourceStart, sourceEnd, targetStart) => {
-        for (let r = sourceStart; r <= sourceEnd; r++) {
-          const sourceRow = ws.getRow(r)
-          const targetRow = ws.getRow(targetStart + (r - sourceStart))
-          targetRow.height = sourceRow.height
-          sourceRow.eachCell({ includeEmpty: true }, (sourceCell, colNumber) => {
-            const targetCell = targetRow.getCell(colNumber)
-            targetCell.value = sourceCell.value
-            targetCell.style = sourceCell.style
-          })
-        }
-      }
-
-      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
-        const startRow = 1 + (pageIndex * PAGE_TOTAL_ROWS)
-
-        // 如果是第二頁以後，複製第一頁的標題與單頭格式
-        if (pageIndex > 0) {
-          copyPageTemplate(ws, 1, HEADER_ROWS, startRow)
-        }
-
-        // --- 填寫單頭資訊 (11pt) ---
-        const headerCells = [
-          { ref: `B${startRow}`, value: order.TO_SHOP },     // 收貨門市
-          { ref: `G${startRow}`, value: order.OUT_ID },      // 出貨單號
-          { ref: `B${startRow + 1}`, value: order.USER },    // 負責人員
-          { ref: `G${startRow + 1}`, value: order.INPUT_DATE }, // 建立日期
-          { ref: `B${startRow + 2}`, value: order.APP_USER }, // 核准人員
-          { ref: `G${startRow + 2}`, value: order.APP_DATE }  // 核准日期
-        ]
-
-        headerCells.forEach(item => {
-          const cell = ws.getCell(item.ref)
-          cell.value = item.value
-          cell.font = FONT_NORMAL
-        })
 
         const startDataIndex = pageIndex * pageSize
         const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
@@ -842,9 +665,8 @@ const formController = {
           Object.entries(colMap).forEach(([key, col]) => {
             const cell = ws.getCell(`${col}${rowNumber}`)
             cell.border = BORDER_STYLE
-            cell.font = FONT_NORMAL
-
             const isAlignLeft = key === 'dep' || key === 'name'
+
             cell.alignment = {
               vertical: 'middle',
               horizontal: isAlignLeft ? 'left' : 'center',
@@ -863,6 +685,178 @@ const formController = {
 
       // 設定列印區域
       ws.pageSetup.printArea = `A1:I${totalPages * PAGE_TOTAL_ROWS}`
+      ws.views = []
+
+      const fileName = `補撥明細_${order.SHOP_ID}_${dayjs().format('YYYYMMDD')}.xlsx`
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`)
+
+      await wb.xlsx.write(res)
+      res.end()
+
+    } catch (err) {
+      console.error('Excel 匯出失敗:', err)
+      if (!res.headersSent) res.status(500).send('匯出失敗')
+    }
+  },
+  exportStOrderOutData: async (req, res) => {
+    // === 1. 檔案與基礎配置變數 ===
+    const TEMPLATE_FILENAME = '出貨明細_範本.xlsx'
+    const HEADER_ROWS = 4            // 單頭(3列) + 標題(1列)
+    const PAGE_TOTAL_ROWS = 28       // 每頁總列數
+    const ROW_HEIGHT = 21           // 資料列高
+    const UNIT_CONVERSION = 5.5      // 公分轉 Excel 欄寬係數
+
+    // === 2. 欄寬配置 (單位：公分) ===
+    const COL_WIDTH_CM = [
+      { col: 1, cm: 4.2 },  // A: 商品類別
+      { col: 2, cm: 7.5 },  // B: 商品名稱
+      { col: 3, cm: 1.3 },  // C: 數量
+      { col: 4, cm: 1.1 },  // D: 單位
+      { col: 5, cm: 0.2 },  // E: 間距 (窄)
+      { col: 6, cm: 4.2 },  // F: 商品類別
+      { col: 7, cm: 7.5 },  // G: 商品名稱
+      { col: 8, cm: 1.3 },  // H: 數量
+      { col: 9, cm: 1.1 }   // I: 單位
+    ]
+
+    // === 3. 版面設定變數 ===
+    const PAGE_SETUP = {
+      orientation: 'landscape',      // 橫式
+      paperSize: 9,                  // A4
+      margins: {
+        left: 0.2, right: 0.2,
+        top: 0.5, bottom: 0,
+        header: 0.18, footer: 0
+      },
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      horizontalCentered: true       // 水平置中
+    }
+
+    // === 4. 頁首頁尾設定 ===
+    const HEADER_FOOTER = {
+      oddHeader: '&C&16&"微軟正黑體,粗體"出貨明細表',
+      oddFooter: '&R第 &P 頁，共 &N 頁'
+    }
+
+    // === 5. 樣式定義 ===
+    const BORDER_STYLE = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    }
+    // ==========================================
+
+    try {
+      const outId = req.body.OUT_ID
+      if (!outId) return res.status(400).send('缺少 OUT_ID')
+
+      const order = await stOrderData.getOrderOutDetail(outId)
+      if (!order) return res.status(404).send('找不到訂單資料')
+
+      const wb = new ExcelJS.Workbook()
+      const templatePath = path.join(__dirname, '../../public/form/', TEMPLATE_FILENAME)
+
+      if (!fs.existsSync(templatePath)) {
+        return res.status(500).send('範本檔不存在: ' + templatePath)
+      }
+
+      await wb.xlsx.readFile(templatePath)
+      const ws = wb.getWorksheet(1)
+
+      // 套用欄寬
+      COL_WIDTH_CM.forEach(item => {
+        ws.getColumn(item.col).width = item.cm * UNIT_CONVERSION
+      })
+
+      // 套用版面設定
+      ws.pageSetup = {
+        ...PAGE_SETUP,
+        headerFooter: HEADER_FOOTER
+      }
+
+      const dataList = order.PROD_DATA || []
+      const dataRowsPerPage = PAGE_TOTAL_ROWS - HEADER_ROWS
+      const pageSize = dataRowsPerPage * 2 // 左右兩側對開
+      const totalPages = Math.ceil(dataList.length / pageSize) || 1
+
+      const copyPageTemplate = (ws, sourceStart, sourceEnd, targetStart) => {
+        for (let r = sourceStart; r <= sourceEnd; r++) {
+          const sourceRow = ws.getRow(r)
+          const targetRow = ws.getRow(targetStart + (r - sourceStart))
+          targetRow.height = sourceRow.height
+          sourceRow.eachCell({ includeEmpty: true }, (sourceCell, colNumber) => {
+            const targetCell = targetRow.getCell(colNumber)
+            targetCell.value = sourceCell.value
+            targetCell.style = sourceCell.style
+          })
+        }
+      }
+
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const startRow = 1 + (pageIndex * PAGE_TOTAL_ROWS)
+
+        // 如果是第二頁以後，複製第一頁的標題與單頭格式
+        if (pageIndex > 0) {
+          copyPageTemplate(ws, 1, HEADER_ROWS, startRow)
+        }
+
+        // 填寫單頭
+        ws.getCell(`B${startRow}`).value = order.TO_SHOP
+        ws.getCell(`G${startRow}`).value = order.OUT_ID
+        ws.getCell(`B${startRow + 1}`).value = order.USER
+        ws.getCell(`G${startRow + 1}`).value = order.INPUT_DATE
+        ws.getCell(`B${startRow + 2}`).value = order.APP_USER
+        ws.getCell(`G${startRow + 2}`).value = order.APP_DATE
+
+        const startDataIndex = pageIndex * pageSize
+        const endDataIndex = Math.min(startDataIndex + pageSize, dataList.length)
+
+        // --- 填寫明細資料 ---
+        for (let i = startDataIndex; i < endDataIndex; i++) {
+          const item = dataList[i]
+          const relativeIndex = i - startDataIndex
+          const isLeft = relativeIndex < dataRowsPerPage
+          const rowInPage = isLeft ? relativeIndex : relativeIndex - dataRowsPerPage
+          const rowNumber = startRow + HEADER_ROWS + rowInPage
+
+          const colMap = isLeft
+            ? { dep: 'A', name: 'B', qty: 'C', unit: 'D' }
+            : { dep: 'F', name: 'G', qty: 'H', unit: 'I' }
+
+          ws.getCell(`${colMap.dep}${rowNumber}`).value = item.DEP
+          ws.getCell(`${colMap.name}${rowNumber}`).value = item.PROD_NAME
+          ws.getCell(`${colMap.qty}${rowNumber}`).value = item.QUANTITY
+          ws.getCell(`${colMap.unit}${rowNumber}`).value = item.UNIT
+
+          // 套用邊框、字體與對齊
+          Object.entries(colMap).forEach(([key, col]) => {
+            const cell = ws.getCell(`${col}${rowNumber}`)
+            cell.border = BORDER_STYLE
+            const isAlignLeft = key === 'dep' || key === 'name'
+
+            cell.alignment = {
+              vertical: 'middle',
+              horizontal: isAlignLeft ? 'left' : 'center',
+              wrapText: true
+            }
+          })
+
+          ws.getRow(rowNumber).height = ROW_HEIGHT
+        }
+
+        // 設定分頁符號
+        if (pageIndex < totalPages - 1) {
+          ws.getRow(startRow + PAGE_TOTAL_ROWS - 1).addPageBreak()
+        }
+      }
+
+      // 設定列印區域
+      ws.pageSetup.printArea = `A1:I${totalPages * PAGE_TOTAL_ROWS}`
+      ws.views = []
 
       const fileName = `出貨明細_${order.TO_SHOP}_${dayjs().format('YYYYMMDD')}.xlsx`
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
