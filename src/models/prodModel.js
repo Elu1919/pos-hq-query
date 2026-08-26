@@ -8,18 +8,37 @@ const prodData = {
     try {
       const pool = await poolPromise
 
-      // 在 JS 層先轉為數字，避免傳入字串導致 SQL bit 轉型失敗
       const isFloatVal = parseInt(filterIn.isfloat ?? -1)
       const selectEnable = parseInt(filterIn.ENABLE ?? 1)
 
-      const result = await pool.request()
+      // 1. 處理逗號分隔的關鍵字（全形/半形逗號皆支援）
+      const rawName = filterIn.PROD_NAME || ''
+      const keywords = rawName
+        .split(/,|，/)
+        .map((k) => k.trim())
+        .filter((k) => k !== '')
+
+      // 2. 建立 request 並綁定固定參數
+      const request = pool.request()
         .input('PROD_ID', filterIn.PROD_ID || '')
-        .input('PROD_NAME', filterIn.PROD_NAME || '')
         .input('PROD_KIND', filterIn.PROD_KIND || '')
         .input('DEP_ID', filterIn.DEP_ID || '')
         .input('IS_FLOAT_VAL', isFloatVal)
         .input('SELECT_ENABLE', selectEnable)
-        .query(`
+
+      // 3. 動態產生多組 LIKE 條件（使用 OR 聯集：包含任一關鍵字即可）
+      let nameCondition = '1 = 1'
+      if (keywords.length > 0) {
+        nameCondition = keywords
+          .map((kw, idx) => {
+            const paramName = `NAME_KW_${idx}`
+            request.input(paramName, `%${kw.toUpperCase()}%`)
+            return `(UPPER(p00.PROD_NAME1) LIKE @${paramName} OR UPPER(p00.PROD_NAME2) LIKE @${paramName})`
+          })
+          .join(' OR ') // 改為 OR
+      }
+
+      const result = await request.query(`
         SELECT
           p00.PROD_ID,
           p00.PROD_NAME1,
@@ -50,7 +69,7 @@ const prodData = {
         
         WHERE 1 = 1
           AND (@PROD_ID = '' OR p00.PROD_ID LIKE '%' + @PROD_ID + '%')
-          AND (@PROD_NAME = '' OR p00.PROD_NAME1 LIKE '%' + @PROD_NAME + '%' OR p00.PROD_NAME2 LIKE '%' + @PROD_NAME + '%')
+          AND (${nameCondition})
           AND (@PROD_KIND = '' OR p00.PROD_KIND = @PROD_KIND)
           AND (@DEP_ID = '' OR p00.DEP_ID = @DEP_ID)
           
@@ -77,9 +96,9 @@ const prodData = {
         ORDER BY p00.PROD_ID
       `)
 
-      const prods = result.recordset.map(row => {
+      const prods = result.recordset.map((row) => {
         const dateFields = ['DATE', 'last_update']
-        dateFields.forEach(key => {
+        dateFields.forEach((key) => {
           if (row[key]) {
             const d = row[key].toISOString().replace('Z', '')
             row[key] = dayjs(d).format('YY-MM-DD HH:mm')
