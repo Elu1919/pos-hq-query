@@ -4,6 +4,8 @@ const ExcelJS = require('exceljs')
 const dayjs = require('dayjs')
 const path = require('path')
 const fs = require('fs')
+const utc = require('dayjs/plugin/utc')
+dayjs.extend(utc)
 
 const { mergePhoneNumbers, chunkItems } = require('../utils/formUtils')
 const pdfService = require('../services/pdfService')
@@ -223,12 +225,15 @@ const formController = {
           const rowInPage = i % pageSize
           const rowNumber = pageStartRow + rowInPage
           const data = dataList[i]
-          const orderDate = data.SALE_DATE ? data.SALE_DATE.toString().replace('Z', '') : ''
+
+          const rawSaleDate = data.SALE_DATE
+          const formattedDate = rawSaleDate ? dayjs.utc(rawSaleDate).format('YY-MM-DD') : ''
+
           const shopName = data.SHOP_NAME ? data.SHOP_NAME.slice(0, 2) : ''
           const typeNum = Number(data.TYPE)
           const type = typeNum < 3 ? (typeNum === 0 ? '銷貨' : typeNum === 1 ? '銷退' : '已退') : null
 
-          ws.getCell(`A${rowNumber}`).value = orderDate ? dayjs(orderDate).format('YY-MM-DD') : ''
+          ws.getCell(`A${rowNumber}`).value = formattedDate
           ws.getCell(`D${rowNumber}`).value = shopName
           ws.getCell(`F${rowNumber}`).value = type
           ws.getCell(`H${rowNumber}`).value = data.SALE_ID
