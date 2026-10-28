@@ -24,6 +24,7 @@ const posDataController = {
       res.status(500).send('畫面載入失敗')
     }
   },
+  /* 銷售資料 (匯入ERP銷貨單) */
   downloadSaleDataToERP: async (req, res) => {
     try {
       const filterIn = { ...req.body }
@@ -65,7 +66,46 @@ const posDataController = {
       res.status(500).send('導出失敗')
     }
   },
-  downloadTransferDataToERP: async (req, res) => {
+  /* 總部退貨 (匯入ERP銷貨單) */
+  downloadTransferDataToErpSale: async (req, res) => {
+    try {
+      const filterIn = { ...req.body }
+
+      const dateCheck = validateDateRange(filterIn.SALE_DATE_S, filterIn.SALE_DATE_E)
+      if (dateCheck.error) {
+        return res.send(`<script>
+                          alert("${dateCheck.error}")
+                          window.history.back()
+                        </script>`)
+      }
+
+      if (Array.isArray(filterIn.SHOP_ID)) {
+        filterIn.SHOP_ID = filterIn.SHOP_ID.join(',')
+      }
+
+      const data = await downloadData.posTransferToErpSale(filterIn)
+
+      if (!data || data.length === 0) {
+        return res.send(`
+          <script>
+            alert('此範圍內查無資料可供下載');
+            window.history.back(); 
+          </script>
+        `);
+      }
+
+      const dateStr = dayjs().format('YYYYMMDD');
+      const fileName = `TransferDataToERPSale_${dateStr}.xlsx`;
+
+      await exportToExcel(res, data, fileName, 'ERP匯入檔');
+
+    } catch (err) {
+      console.error('❌ POS資料導出失敗', err)
+      res.status(500).send('導出失敗 (總部退貨)')
+    }
+  },
+  /* 調撥出庫、供應商進退貨、總部進貨 (匯入ERP調撥單) */
+  downloadTransferDataToErpTrans: async (req, res) => {
     try {
       const filterIn = { ...req.body }
 
@@ -85,7 +125,7 @@ const posDataController = {
         filterIn.TYPE = filterIn.TYPE.join(',')
       }
 
-      const data = await downloadData.posTransferToERP(filterIn)
+      const data = await downloadData.posTransferToErpTrans(filterIn)
 
       if (!data || data.length === 0) {
         return res.send(`
@@ -106,6 +146,7 @@ const posDataController = {
       res.status(500).send('導出失敗')
     }
   },
+  /* 調撥未抓取 */
   showNoTransferData: async (req, res) => {
     try {
       const filterIn = {
@@ -130,6 +171,7 @@ const posDataController = {
       res.status(500).send('資料取得失敗')
     }
   },
+  /* 領用檔 (匯入ERP內部使用單) */
   downloadMaterialData: async (req, res) => {
     try {
       const filterIn = { ...req.body }
@@ -171,6 +213,7 @@ const posDataController = {
       res.status(500).send('導出失敗')
     }
   },
+  /* 門市補撥單 (匯入ERP銷貨單) */
   downloadStOrderOutToERP: async (req, res) => {
     try {
       const id = req.body.OUT_ID

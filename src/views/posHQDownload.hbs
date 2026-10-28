@@ -65,7 +65,7 @@
 <!-- 下載區 -->
 <!-- 銷售資料 -->
 <div class="card mb-4">
-       <h5 class="card-header bg-dark text-light fw-bold">銷售資料 (匯入ERP)</h5>
+       <h5 class="card-header bg-dark text-light fw-bold">銷售資料<span class="badge rounded-pill bg-light text-dark ms-3 fs-6">匯入ERP銷貨單</span></h5>
 
        <div class="card-body">
               <form action="/pos-hq/data/download/sale"
@@ -124,9 +124,150 @@
        </div>
 </div>
 
-<!-- 調撥出庫、供應商進貨、供應商退貨、總部進貨、總部退貨 -->
+<!-- 總部退貨 -->
 <div class="card mb-4">
-       <h5 class="card-header bg-dark text-light fw-bold">調撥出庫、供應商進退貨、總部進退貨 (匯入ERP)</h5>
+       <h5 class="card-header bg-dark text-light fw-bold">總部退貨<span
+                    class="badge rounded-pill bg-light text-dark ms-3 fs-6">匯入ERP銷貨單</span></h5>
+
+       <div class="card-body">
+              <form action="/pos-hq/data/download/transfer-to-sale"
+                    method="POST"
+                    class="d-flex justify-content-between"
+                    id="transfer-to-sale-form">
+
+                     <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold">日期範圍</span>
+                            <input type="date"
+                                   name="SALE_DATE_S"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+                            <p class="me-2 ms-2 pt-1"> ~ </p>
+                            <input type="date"
+                                   name="SALE_DATE_E"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+
+                            <span class="input-group-text fw-bold">目標門市</span>
+                            {{#each shop}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="SHOP_ID"
+                                   id="transfer-to-sale-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}">
+                            <label class="btn btn-outline-secondary"
+                                   style="width: 45px;"
+                                   for="transfer-to-sale-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
+                            {{/each}}
+                     </div>
+
+                     <div class="d-flex">
+                            <button type="submit"
+                                    form="transfer-to-sale-form"
+                                    class="btn btn-primary fw-bold"
+                                    style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
+                                      style="color: rgb(255, 255, 255);"></i></button>
+                     </div>
+
+
+              </form>
+
+       </div>
+</div>
+
+<!-- 調撥出庫、供應商進貨、供應商退貨、總部進貨 -->
+<div class="card mb-4">
+       <h5 class="card-header bg-dark text-light fw-bold">調撥出庫 | 供應商進退貨 | 總部進貨<span class="badge rounded-pill bg-light text-dark ms-3 fs-6">匯入ERP調撥單</span></h5>
+
+       <div class="card-body">
+              <form action="/pos-hq/data/download/transfer"
+                    method="POST"
+                    class="d-flex justify-content-between"
+                    id="transfer-form">
+
+                     <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold">日期範圍</span>
+                            <input type="date"
+                                   name="SALE_DATE_S"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+                            <p class="me-2 ms-2 pt-1"> ~ </p>
+                            <input type="date"
+                                   name="SALE_DATE_E"
+                                   class="form-control"
+                                   style="max-width:220px;"
+                                   aria-describedby="basic-addon1">
+
+                            <span class="input-group-text fw-bold">出庫門市</span>
+                            {{#each shop}}
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="SHOP_ID"
+                                   id="transfer-{{this.SHOP_ID}}"
+                                   value="{{this.SHOP_ID}}">
+                            <label class="btn btn-outline-secondary"
+                                   style="width: 45px;"
+                                   for="transfer-{{this.SHOP_ID}}"><span
+                                         class="align-middle">{{this.SHOP_ID}}</span></label>
+                            {{/each}}
+
+                            <span class="input-group-text fw-bold">資料表</span>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="OUT"
+                                   value="OUT">
+                            <label class="btn btn-outline-secondary"
+                                   for="OUT"><span class="align-middle">調撥出庫</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="TAKEIN"
+                                   value="TAKEIN">
+                            <label class="btn btn-outline-secondary"
+                                   for="TAKEIN"><span class="align-middle">供應商進貨</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="TAKEOUT"
+                                   value="TAKEOUT">
+                            <label class="btn btn-outline-secondary"
+                                   for="TAKEOUT"><span class="align-middle">供應商退貨</span></label>
+                            <input class="btn-check"
+                                   type="checkbox"
+                                   name="TABLE"
+                                   id="IN"
+                                   value="IN">
+                            <label class="btn btn-outline-secondary"
+                                   for="IN"><span class="align-middle">總部進貨</span></label>
+                     </div>
+
+                     <div class="d-flex">
+                            <button id="no-transfer-btn"
+                                    style="width: 120px;"
+                                    class="btn btn-warning mx-2">調撥未抓取</button>
+
+                            <button type="submit"
+                                    form="transfer-form"
+                                    class="btn btn-primary fw-bold"
+                                    style="width: 100px;">下載 <i class="fa-regular fa-circle-down"
+                                      style="color: rgb(255, 255, 255);"></i></button>
+
+                     </div>
+
+
+              </form>
+
+       </div>
+</div>
+
+<!-- 調撥出庫、供應商進貨、供應商退貨、總部進貨、總部退貨 (已停用) -->
+<!--  <div class="card mb-4">
+       <h5 class="card-header bg-dark text-light fw-bold">調撥出庫 | 供應商進退貨 | 總部進退貨<span
+                    class="badge rounded-pill bg-light text-dark ms-3 fs-6">匯入ERP調撥單</span></h5>
 
        <div class="card-body">
               <form action="/pos-hq/data/download/transfer"
@@ -197,7 +338,6 @@
                                    value="SEND_BACK">
                             <label class="btn btn-outline-secondary"
                                    for="SEND_BACK"><span class="align-middle">總部退貨</span></label>
-
                      </div>
 
                      <div class="d-flex">
@@ -217,11 +357,11 @@
               </form>
 
        </div>
-</div>
+</div> -->
 
 <!-- 領用 -->
 <div class="card mb-4">
-       <h5 class="card-header bg-dark text-light fw-bold">領用檔 (匯入ERP)</h5>
+       <h5 class="card-header bg-dark text-light fw-bold">領用檔<span class="badge rounded-pill bg-light text-dark ms-3 fs-6">匯入ERP內部使用單</span></h5>
 
        <div class="card-body">
               <form action="/pos-hq/data/download/material"

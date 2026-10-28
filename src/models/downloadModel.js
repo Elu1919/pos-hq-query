@@ -184,7 +184,246 @@ const downloadModel = {
             throw err
         }
     },
-    // POS調撥單 to ERP調撥單
+    // 總部退貨 to ERP銷貨單
+    posTransferToErpSale: async (filterIn) => {
+        try {
+            const pool = await poolPromise
+
+            const sDate = (filterIn.SALE_DATE_S || '').toString()
+            const eDate = (filterIn.SALE_DATE_E || '').toString()
+            const shopIds = Array.isArray(filterIn.SHOP_ID)
+                ? filterIn.SHOP_ID.join(',')
+                : (filterIn.SHOP_ID || '').toString()
+
+            const result = await pool.request()
+                .input('S_DATE_VAL', sDate)
+                .input('E_DATE_VAL', eDate)
+                .input('SHOP_IDS_VAL', shopIds)
+                .input('TYPE_VAL', 'SEND_BACK')
+                .query(`
+                /* 篩選變數定義 */
+                DECLARE @S_DT NVARCHAR(10) = @S_DATE_VAL
+                DECLARE @E_DT NVARCHAR(10) = @E_DATE_VAL
+                DECLARE @S_IDS NVARCHAR(MAX) = @SHOP_IDS_VAL
+                DECLARE @T_IDS NVARCHAR(MAX) = @TYPE_VAL
+
+                DECLARE @S_DATE DATETIME = CASE WHEN ISDATE(@S_DT) = 1 THEN CAST(@S_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+                DECLARE @E_DATE DATETIME = CASE WHEN ISDATE(@E_DT) = 1 THEN CAST(@E_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+
+                DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(ISNULL(@S_IDS, ''), ',', '</v><v>') + '</v></r>' AS XML)
+                DECLARE @TypeXml XML = CAST('<r><v>' + REPLACE(ISNULL(@T_IDS, ''), ',', '</v><v>') + '</v></r>' AS XML)
+
+                SELECT 
+                    日期, 
+                    DENSE_RANK() OVER (
+                        ORDER BY 日期 DESC,  
+                        [收貨倉庫] ASC
+                    ) AS 序號,
+                     [客戶/供應商編碼],
+                     '' AS [客戶/供應商名稱],
+                    'A' AS 發貨倉庫,
+                    '' AS 承辦人,
+                    '13' AS 交易類型,
+                    '' AS 貨幣,
+                    '' AS 匯率,
+                    '' AS [銷貨單單號],
+                    '' AS 關鍵字,
+                    服務人員,
+                    '總部退貨' AS 類型,
+                    POS單號,
+                    '' AS 貴賓電話,
+                    CAST(品項編碼 AS NVARCHAR(MAX)) AS 品項編碼,
+                    '' AS [品項名稱],
+                    '' AS 規格,
+                    數量,
+                    '' AS 加值,
+                    0 AS 單價,
+                    0 AS 總折讓,
+                    '' AS 外幣金額,
+                    0 AS [小計(稅前價)],
+                    0 AS 營業稅,
+                    '' AS 招待備註,
+                    '' AS 發票號碼,
+                    '' AS [載具/統編],
+                    備註,
+                    '' AS 原銷貨單號,
+                    '' AS 產生生產入庫
+                FROM (
+                        SELECT 
+                        CONVERT(VARCHAR(8), SB0.INPUT_DATE, 112) AS 日期, 
+                        SB0.IN_SHOP AS [收貨倉庫],
+                        CAST(SB0.STK_ID AS NVARCHAR(100)) AS [客戶/供應商編碼],
+                        E.EMP_NAME AS 服務人員,
+                        SB0.SEND_BACK_ID AS POS單號,
+
+                        ISNULL(
+                            CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                            N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號'
+                        ) AS 品項編碼,
+
+                        -SB1.QUANTITY AS 數量, 
+                        SB0.MEMO AS 備註, 
+
+                        'SEND_BACK' AS TABLE_TYPE, 
+                        SB0.SHOP_ID AS SHOP_ID, 
+                        SB0.INPUT_DATE AS RAW_DATE
+                    FROM SEND_BACK01 SB1
+                    INNER JOIN SEND_BACK00 SB0 ON SB1.SEND_BACK_ID = SB0.SEND_BACK_ID
+                    LEFT JOIN PRODUCT00 P ON SB1.PROD_ID = P.PROD_ID
+                    LEFT JOIN EMPLOYEE E ON SB0.USER_ID = E.EMP_ID
+                    WHERE SB0.STATUS = '2' AND SB0.SHOP_ID NOT IN ('A', 'TEST01')
+                ) AS CombinedData
+                WHERE (RAW_DATE >= @S_DATE AND RAW_DATE < DATEADD(DAY, 1, @E_DATE))
+                AND (ISNULL(@S_IDS, '') = '' OR SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
+                AND (ISNULL(@T_IDS, '') = '' OR TABLE_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @TypeXml.nodes('/r/v') AS t(v)))
+                ORDER BY 序號 ASC
+            `)
+            return result.recordset
+        } catch (err) {
+            console.error('總部退貨資料取得失敗：', err)
+            throw err
+        }
+    },
+    // POS調撥、供應商進退貨、總部進貨 to ERP調撥單
+    posTransferToErpTrans: async (filterIn) => {
+        try {
+            const pool = await poolPromise
+
+            const sDate = (filterIn.SALE_DATE_S || '').toString()
+            const eDate = (filterIn.SALE_DATE_E || '').toString()
+            const shopIds = Array.isArray(filterIn.SHOP_ID)
+                ? filterIn.SHOP_ID.join(',')
+                : (filterIn.SHOP_ID || '').toString()
+
+            const tableIds = Array.isArray(filterIn.TABLE)
+                ? filterIn.TABLE.join(',')
+                : (filterIn.TABLE || '').toString()
+
+            const result = await pool.request()
+                .input('S_DATE_VAL', sDate)
+                .input('E_DATE_VAL', eDate)
+                .input('SHOP_IDS_VAL', shopIds)
+                .input('TYPE_VAL', tableIds)
+                .query(`
+                /* 篩選變數定義 */
+                DECLARE @S_DT NVARCHAR(10) = @S_DATE_VAL
+                DECLARE @E_DT NVARCHAR(10) = @E_DATE_VAL
+                DECLARE @S_IDS NVARCHAR(MAX) = @SHOP_IDS_VAL
+                DECLARE @T_IDS NVARCHAR(MAX) = @TYPE_VAL
+
+                /* 1. 日期預設處理 */
+                DECLARE @S_DATE DATETIME = CASE WHEN ISDATE(@S_DT) = 1 THEN CAST(@S_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+                DECLARE @E_DATE DATETIME = CASE WHEN ISDATE(@E_DT) = 1 THEN CAST(@E_DT AS DATE) ELSE CAST(GETDATE() AS DATE) END
+
+                /* 2. 多選字串拆解 */
+                DECLARE @ShopXml XML = CAST('<r><v>' + REPLACE(ISNULL(@S_IDS, ''), ',', '</v><v>') + '</v></r>' AS XML)
+                DECLARE @TypeXml XML = CAST('<r><v>' + REPLACE(ISNULL(@T_IDS, ''), ',', '</v><v>') + '</v></r>' AS XML)
+
+                /* 3. 主查詢邏輯 */
+                SELECT 
+                    日期, 
+                    DENSE_RANK() OVER (
+                        ORDER BY 日期 DESC, POS單據類型 ASC, 出貨倉庫 ASC, 收貨倉庫 ASC
+                    ) AS 序號,
+                    '' AS 承辦人,
+                    出貨倉庫,
+                    收貨倉庫,
+                    '' AS 專案,
+                    '' AS 借出客戶,
+                    '' AS 倉庫調撥單號,
+                    POS單據類型,
+                    POS單號,
+                    /* 關鍵修正：確保報錯訊息不被截斷 */
+                    CAST(品項編碼 AS NVARCHAR(MAX)) AS 品項編碼,
+                    '' AS 品項名稱,
+                    '' AS 規格,
+                    數量,
+                    服務人員,
+                    備註,
+                    '' AS 產生生產入庫
+                FROM (
+                    SELECT 
+                        CONVERT(VARCHAR(8), T10.INPUT_DATE, 112) AS 日期, 'A' AS 出貨倉庫, T10.STK_ID AS 收貨倉庫,
+                        '供應商進貨' AS POS單據類型, T11.TAKEIN_ID AS POS單號,
+                        /* 品項編碼判斷邏輯 */
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        T11.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        T10.MEMO AS 備註, 'TAKEIN' AS TABLE_TYPE, T10.SHOP_ID AS SHOP_ID, 
+                        T10.INPUT_DATE AS RAW_DATE
+                    FROM TAKEIN11 T11
+                    INNER JOIN TAKEIN10 T10 ON T11.TAKEIN_ID = T10.TAKEIN_ID
+                    LEFT JOIN PRODUCT00 P ON T11.PROD_ID = P.PROD_ID
+                    LEFT JOIN EMPLOYEE E ON T10.USER_ID = E.EMP_ID
+                    WHERE T10.STATUS = '2' AND T10.SHOP_ID NOT IN ('A', 'TEST01')
+
+                    UNION ALL
+
+                    SELECT 
+                        CONVERT(VARCHAR(8), T00.INPUT_DATE, 112) AS 日期, T00.STK_ID AS 出貨倉庫, 'A' AS 收貨倉庫,
+                        '供應商退貨' AS POS單據類型, T01.TAKEOUT_ID AS POS單號,
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        T01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        T00.MEMO AS 備註, 'TAKEOUT' AS TABLE_TYPE, T00.SHOP_ID AS SHOP_ID, 
+                        T00.INPUT_DATE AS RAW_DATE
+                    FROM TAKEOUT01 T01
+                    INNER JOIN TAKEOUT00 T00 ON T01.TAKEOUT_ID = T00.TAKEOUT_ID
+                    LEFT JOIN PRODUCT00 P ON T01.PROD_ID = P.PROD_ID
+                    LEFT JOIN EMPLOYEE E ON T00.USER_ID = E.EMP_ID
+                    WHERE T00.STATUS = '2' AND T00.SHOP_ID NOT IN ('A', 'TEST01')
+
+                    UNION ALL
+
+                    SELECT 
+                        CONVERT(VARCHAR(8), O00.INPUT_DATE, 112) AS 日期, O00.OUT_SHOP AS 出貨倉庫, O00.TO_SHOP AS 收貨倉庫,
+                        '調撥' AS POS單據類型, O01.OUT_ID AS POS單號,
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        O01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        O00.MEMO AS 備註, 'OUT' AS TABLE_TYPE, O00.SHOP_ID AS SHOP_ID, 
+                        O00.INPUT_DATE AS RAW_DATE
+                    FROM OUT01 O01
+                    INNER JOIN OUT00 O00 ON O01.OUT_ID = O00.OUT_ID
+                    LEFT JOIN PRODUCT00 P ON O01.PROD_ID = P.PROD_ID
+                    LEFT JOIN EMPLOYEE E ON O00.USER_ID = E.EMP_ID
+                    WHERE O00.STATUS = '2' 
+                    AND O00.OUT_TYPE = '0' 
+                    AND O00.EXPORTED = 'T'
+                    AND O00.SHOP_ID NOT IN ('A', 'TEST01')
+                    AND O00.TO_SHOP NOT IN ('A', 'TEST01')
+                    AND O00.OUT_SHOP NOT IN ('A', 'TEST01')
+
+                    UNION ALL
+
+                    SELECT 
+                        CONVERT(VARCHAR(8), I00.INPUT_DATE, 112) AS 日期, 'A' AS 出貨倉庫, I00.IN_SHOP AS 收貨倉庫,
+                        '總部進貨' AS POS單據類型, I00.IN_ID AS POS單號,
+                        ISNULL(CAST(NULLIF(LTRIM(RTRIM(P.prod_shortname)), '') AS NVARCHAR(MAX)), 
+                               N'「' + CAST(ISNULL(P.PROD_NAME1, N'未知商品') AS NVARCHAR(MAX)) + N'」未設定ERP編號') AS 品項編碼,
+                        I01.QUANTITY AS 數量, E.EMP_NAME AS 服務人員,
+                        I00.MEMO AS 備註, 'IN' AS TABLE_TYPE, I00.SHOP_ID AS SHOP_ID, 
+                        I00.INPUT_DATE AS RAW_DATE
+                    FROM IN01 I01
+                    INNER JOIN IN00 I00 ON I01.IN_ID = I00.IN_ID
+                    LEFT JOIN PRODUCT00 P ON I01.PROD_ID = P.PROD_ID
+                    LEFT JOIN EMPLOYEE E ON I00.USER_ID = E.EMP_ID
+                    WHERE I00.STATUS = '2' 
+                    AND I00.IN_TYPE = '1'
+                    AND I00.SHOP_ID NOT IN ('A', 'TEST01')
+                ) AS CombinedData
+                WHERE (RAW_DATE >= @S_DATE AND RAW_DATE < DATEADD(DAY, 1, @E_DATE))
+                AND (ISNULL(@S_IDS, '') = '' OR SHOP_ID IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @ShopXml.nodes('/r/v') AS t(v)))
+                AND (ISNULL(@T_IDS, '') = '' OR TABLE_TYPE IN (SELECT t.v.value('.', 'NVARCHAR(50)') FROM @TypeXml.nodes('/r/v') AS t(v)))
+                ORDER BY 序號 ASC
+            `)
+            return result.recordset
+        } catch (err) {
+            console.error('調撥資料取得失敗：', err)
+            throw err
+        }
+    },
+    // POS調撥、供應商進退貨、總部進退貨 to ERP調撥單 (已停用)
     posTransferToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
@@ -462,7 +701,7 @@ const downloadModel = {
             throw err
         }
     },
-    // POS領用 to ERP領用
+    // POS領用 to ERP內部使用單
     posMaterialToERP: async (filterIn) => {
         try {
             const pool = await poolPromise
@@ -548,7 +787,7 @@ const downloadModel = {
             throw err
         }
     },
-    // POS出貨單 to ERP調撥單
+    // POS出貨單 to ERP調撥單 (已停用)
     posStOrderOutToERP: async (id) => {
         try {
             const pool = await poolPromise
